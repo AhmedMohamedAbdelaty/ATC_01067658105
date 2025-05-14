@@ -1,0 +1,38 @@
+# IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VS Code
+.vscode/
+
+# Log files
+*.log
+
+# Build output
+backend/target/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# env
+*.env
