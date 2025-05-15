@@ -27,7 +27,9 @@ Before you begin, make sure you have the following installed:
     POSTGRES_USER=postgres
     POSTGRES_PASSWORD=root
     POSTGRES_DB=event_booking
+    JWT_SECRET=your_jwt_secret
     ```
+    replace the jwt secret with a secure value of your choice.
 
 3.  Configure Flyway
     Create a `flyway.conf` file in the project root (backend folder) with the following content:
@@ -46,3 +48,11 @@ Before you begin, make sure you have the following installed:
     ./mvnw spring-boot:run
     ```
     The application will start, and Flyway will apply database migrations automatically. It will be available at `http://localhost:8080`.
+
+## Admin Functionality
+
+To test admin functionalities, you can use the default admin credentials:
+
+- Username: `admin`
+- Email: `admin@gmail.com`
+- Password: `password`
