@@ -1,6 +1,7 @@
 package com.areeb.event_booking_system.dtos.auth;
 
 import com.areeb.event_booking_system.dtos.user.UserDto;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
@@ -10,7 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class AuthDto {
 
     @Data
