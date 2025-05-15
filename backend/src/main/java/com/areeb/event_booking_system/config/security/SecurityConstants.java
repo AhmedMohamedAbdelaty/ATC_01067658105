@@ -7,8 +7,8 @@ public final class SecurityConstants {
     }
 
     public static final String[] PUBLIC_PATHS = {
-            "/login",
-            "/register",
+            "/api/auth/login",
+            "/api/auth/register",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
