@@ -13,6 +13,7 @@ import com.areeb.event_booking_system.dtos.auth.AuthDto.LoginRequest;
 import com.areeb.event_booking_system.dtos.auth.AuthDto.LoginResponse;
 import com.areeb.event_booking_system.dtos.auth.AuthDto.RegisterRequest;
 import com.areeb.event_booking_system.dtos.user.UserDto.UserResponseDto;
+import com.areeb.event_booking_system.mappers.UserMapper;
 import com.areeb.event_booking_system.models.user.Role;
 import com.areeb.event_booking_system.models.user.User;
 import com.areeb.event_booking_system.repository.RoleRepository;
@@ -28,6 +29,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
+    private final UserMapper userMapper;
 
     @Override
     @Transactional
@@ -52,14 +54,7 @@ public class AuthServiceImpl implements AuthService {
 
         return LoginResponse.builder()
                 .token(accessToken)
-                .user(UserResponseDto.builder()
-                        .id(user.getId())
-                        .username(user.getUsername())
-                        .email(user.getEmail())
-                        .lastLogin(user.getLastLogin())
-                        .createdAt(user.getCreatedAt())
-                        .updatedAt(user.getUpdatedAt())
-                        .build())
+                .user(userMapper.toUserResponseDto(user))
                 .build();
     }
 
@@ -68,17 +63,13 @@ public class AuthServiceImpl implements AuthService {
     public UserResponseDto register(RegisterRequest requestDto) {
         String username = requestDto.getUsername();
         String email = requestDto.getEmail();
-        String password = requestDto.getPassword();
 
         if (userRepository.existsByUsername(username) || userRepository.existsByEmail(email)) {
             throw new RuntimeException("Username or email already exists");
         }
 
-        User newUser = User.builder()
-                .username(username)
-                .email(email)
-                .password(passwordEncoder.encode(password))
-                .build();
+        User newUser = userMapper.toUser(requestDto);
+        newUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
 
         // Set USER as default role
         Role defaultRole = roleRepository.findByName(Role.RoleType.ROLE_USER)
@@ -86,13 +77,6 @@ public class AuthServiceImpl implements AuthService {
         newUser.getRoles().add(defaultRole);
 
         newUser = userRepository.save(newUser);
-        return UserResponseDto.builder()
-                .id(newUser.getId())
-                .username(newUser.getUsername())
-                .email(newUser.getEmail())
-                .lastLogin(newUser.getLastLogin())
-                .createdAt(newUser.getCreatedAt())
-                .updatedAt(newUser.getUpdatedAt())
-                .build();
+        return userMapper.toUserResponseDto(newUser);
     }
 }
