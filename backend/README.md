@@ -48,3 +48,11 @@ Before you begin, make sure you have the following installed:
     ./mvnw spring-boot:run
     ```
     The application will start, and Flyway will apply database migrations automatically. It will be available at `http://localhost:8080`.
+
+## Admin Functionality
+
+To test admin functionalities, you can use the default admin credentials:
+
+- Username: `admin`
+- Email: `admin@gmail.com`
+- Password: `password`
