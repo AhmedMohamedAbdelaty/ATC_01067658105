@@ -4,10 +4,13 @@ import java.io.Serializable;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserDto implements Serializable {
 
     @Schema(name = "UserResponse", description = "User details")
