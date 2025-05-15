@@ -38,6 +38,6 @@ public class Permission {
     private PermissionCategory category;
 
     public enum PermissionCategory {
-        ADMINISTRATION, USER
+        ADMINISTRATION, USER, EVENT_MANAGEMENT, EVENT_OPERATIONS, BOOKING_OPERATIONS, BOOKING_MANAGEMENT, USER_PROFILE
     }
 }
