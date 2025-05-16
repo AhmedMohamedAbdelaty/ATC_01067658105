@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (eventId) {
             loadEventDetails(eventId);
         } else {
-            window.location.href = '/index.html';
+            window.location.href = 'index.html';
         }
     }
 });

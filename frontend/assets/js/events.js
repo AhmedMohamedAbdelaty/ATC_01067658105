@@ -107,7 +107,7 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
                                 <div class="d-grid">
                                     ${isBooked
                                         ? '<button class="btn btn-success" disabled>Booked</button>'
-                                        : `<a href="event-details.html?id=${event.id}" class="btn btn-outline-primary">View Details</a>`
+                                        : `<button class="btn btn-outline-primary view-details-btn" data-event-id="${event.id}">View Details</button>`
                                     }
                                 </div>
                             </div>
@@ -156,6 +156,15 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
             } else {
                 paginationContainer.innerHTML = '';
             }
+
+            const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
+            viewDetailsButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const eventId = this.getAttribute('data-event-id');
+                    console.log('Navigating to event details for ID:', eventId);
+                    window.location.href = `event-details.html?id=${eventId}`;
+                });
+            });
         } else {
             eventsContainer.innerHTML = `
                 <div class="col-12 text-center">
