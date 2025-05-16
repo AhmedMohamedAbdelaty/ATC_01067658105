@@ -36,6 +36,7 @@ Thumbs.db
 
 # env
 *.env
+.env.docker
 
 # Flyway
 flyway.conf

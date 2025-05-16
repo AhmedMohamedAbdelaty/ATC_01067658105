@@ -111,6 +111,7 @@
 	</dependencies>
 
 	<build>
+		<finalName>ebs</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
