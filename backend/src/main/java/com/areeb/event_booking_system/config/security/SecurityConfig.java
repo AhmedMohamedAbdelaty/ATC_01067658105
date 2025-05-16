@@ -58,10 +58,18 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(SecurityConstants.ALLOWED_ORIGINS);
         configuration.setAllowedMethods(SecurityConstants.ALLOWED_METHODS);
-        configuration.setAllowedHeaders(SecurityConstants.EXPOSED_HEADERS);
+        configuration.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With",
+                "Cache-Control",
+                "Access-Control-Allow-Origin",
+                "Access-Control-Allow-Headers",
+                "Origin"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
-        configuration.setExposedHeaders(List.of("Set-Cookie"));
+        configuration.setExposedHeaders(List.of("Set-Cookie", "Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
