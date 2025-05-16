@@ -76,7 +76,7 @@ function setupEventForm() {
             }
 
             if (response.success) {
-                window.location.href = 'admin/index.html';
+                window.location.href = 'index.html';
             } else {
                 throw new Error(response.message || 'Failed to save event');
             }

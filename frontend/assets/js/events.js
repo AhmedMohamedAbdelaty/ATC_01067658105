@@ -76,17 +76,19 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
             }
 
             eventsContainer.innerHTML = '';
+            let eventsHTML = '';
 
             // Add card for each event
             events.forEach(event => {
                 const isBooked = userBookings.includes(event.id);
                 const eventDate = new Date(event.eventDate);
+                const imageUrl = event.imageUrl && event.imageUrl.startsWith('http') ? event.imageUrl : 'https://placehold.co/600x400?text=Event+Image';
 
-                eventsContainer.innerHTML += `
+                eventsHTML += `
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card event-card h-100">
                             ${isBooked ? `<a href="event-details.html?id=${event.id}" class="badge bg-success booked-badge booked-badge-link text-decoration-none">Booked</a>` : ''}
-                            <img src="${event.imageUrl}" class="card-img-top" alt="${event.name}">
+                            <img src="${imageUrl}" class="card-img-top" alt="${event.name}">
                             <div class="card-body">
                                 <h5 class="card-title">${event.name}</h5>
                                 <p class="card-text text-truncate">${event.description}</p>
@@ -115,6 +117,8 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
                     </div>
                 `;
             });
+
+            eventsContainer.innerHTML = eventsHTML;
 
             if (totalPages > 1) {
                 let paginationHTML = '';
