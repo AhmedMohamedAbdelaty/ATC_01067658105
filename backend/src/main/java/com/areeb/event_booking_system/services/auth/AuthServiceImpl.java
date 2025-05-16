@@ -2,27 +2,35 @@ package com.areeb.event_booking_system.services.auth;
 
 import java.time.OffsetDateTime;
 
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.areeb.event_booking_system.config.security.CookieUtil;
 import com.areeb.event_booking_system.config.security.JwtUtil;
 import com.areeb.event_booking_system.dtos.auth.AuthDto.LoginRequest;
 import com.areeb.event_booking_system.dtos.auth.AuthDto.LoginResponse;
+import com.areeb.event_booking_system.dtos.auth.AuthDto.RefreshTokenResponse;
 import com.areeb.event_booking_system.dtos.auth.AuthDto.RegisterRequest;
 import com.areeb.event_booking_system.dtos.user.UserDto.UserResponseDto;
 import com.areeb.event_booking_system.mappers.UserMapper;
+import com.areeb.event_booking_system.models.auth.RefreshToken;
 import com.areeb.event_booking_system.models.user.Role;
 import com.areeb.event_booking_system.models.user.User;
+import com.areeb.event_booking_system.repository.RefreshTokenRepository;
 import com.areeb.event_booking_system.repository.RoleRepository;
 import com.areeb.event_booking_system.repository.UserRepository;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
@@ -30,6 +38,8 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
     private final UserMapper userMapper;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final CookieUtil cookieUtil;
 
     @Override
     @Transactional
@@ -50,10 +60,23 @@ public class AuthServiceImpl implements AuthService {
         user = userRepository.save(user);
 
         // Create access token
-        String accessToken = jwtUtil.generateToken(user);
+        String accessToken = jwtUtil.generateAccessToken(user);
+
+        // Create refresh token
+        String refreshTokenString = jwtUtil.generateRefreshToken(user);
+
+        // Save refresh token to database
+        RefreshToken refreshToken = RefreshToken.builder()
+                .user(user)
+                .token(refreshTokenString)
+                .expiryDate(OffsetDateTime.now().plusDays(7))
+                .build();
+
+        refreshTokenRepository.save(refreshToken);
 
         return LoginResponse.builder()
                 .token(accessToken)
+                .refreshToken(refreshTokenString)
                 .user(userMapper.toUserResponseDto(user))
                 .build();
     }
@@ -78,5 +101,68 @@ public class AuthServiceImpl implements AuthService {
 
         newUser = userRepository.save(newUser);
         return userMapper.toUserResponseDto(newUser);
+    }
+
+    @Override
+    @Transactional
+    public RefreshTokenResponse refreshToken(HttpServletRequest request) {
+
+        String refreshTokenString = cookieUtil.getRefreshTokenFromCookies(request);
+
+        if (refreshTokenString == null) {
+            throw new RuntimeException("Refresh token is required");
+        }
+
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenString)
+                .orElseThrow(() -> new RuntimeException("Refresh token not found"));
+
+        if (refreshToken.isExpired()) {
+            refreshTokenRepository.delete(refreshToken);
+            throw new RuntimeException("Refresh token has expired");
+        }
+
+        User user = refreshToken.getUser();
+
+        refreshTokenRepository.delete(refreshToken);
+
+        String newAccessToken = jwtUtil.generateAccessToken(user);
+        String newRefreshTokenString = jwtUtil.generateRefreshToken(user);
+
+        RefreshToken newRefreshToken = RefreshToken.builder()
+                .user(user)
+                .token(newRefreshTokenString)
+                .expiryDate(OffsetDateTime.now().plusDays(7))
+                .build();
+
+        refreshTokenRepository.save(newRefreshToken);
+
+        return RefreshTokenResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshTokenString)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public ResponseCookie logout(HttpServletRequest request) {
+        String refreshTokenString = cookieUtil.getRefreshTokenFromCookies(request);
+        if (refreshTokenString != null) {
+            refreshTokenRepository.findByToken(refreshTokenString)
+                    .ifPresent(refreshTokenRepository::delete);
+        }
+        return cookieUtil.clearCookie("/api/auth/refresh");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RefreshToken findRefreshToken(String token) {
+        return refreshTokenRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Refresh token not found"));
+    }
+
+    @Override
+    @Transactional
+    public void deleteRefreshToken(String token) {
+        refreshTokenRepository.deleteByToken(token);
     }
 }
