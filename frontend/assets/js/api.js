@@ -190,7 +190,14 @@ async function refreshToken() {
 
         if (data.success && data.data) {
             localStorage.setItem('token', data.data.accessToken);
-            console.log('Token refreshed successfully');
+            console.log('Token refreshed successfully:', data.data.accessToken.substring(0, 10) + '...');
+
+            const storedToken = localStorage.getItem('token');
+            if (!storedToken) {
+                console.error('Failed to store refreshed token in localStorage');
+                return false;
+            }
+
             return true;
         }
 
