@@ -35,8 +35,15 @@ function checkAuthStatus() {
         loggedOutElements.forEach(el => el.style.display = 'none');
 
         // If admin
-        const isAdmin = user.roles && user.roles.some(role => role === 'ROLE_ADMIN' || role.name === 'ROLE_ADMIN');
         console.log('User roles:', user.roles);
+        const isAdmin = user.roles && user.roles.some(role => {
+            if (typeof role === 'string') {
+                return role === 'ROLE_ADMIN';
+            } else if (typeof role === 'object') {
+                return role.name === 'ROLE_ADMIN';
+            }
+            return false;
+        });
         console.log('Is admin:', isAdmin);
         adminElements.forEach(el => el.style.display = isAdmin ? 'block' : 'none');
     } else {
@@ -136,7 +143,9 @@ function protectAuthenticatedPages() {
     const authenticatedPages = [
         '/',
         'index.html',
+        'my-bookings.html',
         'admin/index.html',
+        'admin/event-form.html',
     ];
 
     const currentPath = window.location.pathname;
@@ -152,16 +161,21 @@ function protectAuthenticatedPages() {
 
 function protectAdminPages() {
     const adminPages = [
-        'admin/index.html'
+        'admin/index.html',
+        "admin/event-form.html",
     ];
 
     const currentPath = window.location.pathname;
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     console.log('Checking admin access, user:', user);
-    const isAdmin = user.roles && user.roles.some(role =>
-        role === 'ROLE_ADMIN' ||
-        (typeof role === 'object' && role.name === 'ROLE_ADMIN')
-    );
+    const isAdmin = user.roles && user.roles.some(role => {
+        if (typeof role === 'string') {
+            return role === 'ROLE_ADMIN';
+        } else if (typeof role === 'object') {
+            return role.name === 'ROLE_ADMIN';
+        }
+        return false;
+    });
 
     const requiresAdmin = adminPages.some(page => currentPath.endsWith(page));
 
