@@ -41,13 +41,21 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
         let userBookings = [];
         if (localStorage.getItem('token')) {
             try {
+                console.log('Fetching user bookings...');
                 const bookingsResponse = await BookingsAPI.getUserBookings();
-                if (bookingsResponse.success && bookingsResponse.data) {
+                console.log('User bookings response:', bookingsResponse);
+
+                if (bookingsResponse.success && bookingsResponse.data && bookingsResponse.data.content) {
                     userBookings = bookingsResponse.data.content.map(booking => booking.eventDetails.id);
+                    console.log('User has bookings for events:', userBookings);
+                } else {
+                    console.log('No bookings found or empty response');
                 }
             } catch (error) {
                 console.error('Error fetching user bookings:', error);
             }
+        } else {
+            console.log('User not logged in, skipping bookings fetch');
         }
 
         // ghets all events
