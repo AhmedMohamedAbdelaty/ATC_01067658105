@@ -3,7 +3,6 @@ package com.areeb.event_booking_system.controllers.auth;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -47,9 +46,9 @@ public class AuthController {
     })
     public ResponseEntity<?> login(@Valid @RequestBody AuthDto.LoginRequest request) {
         LoginResponse loginResponse = authService.login(request);
-        ResponseCookie refreshTokenCookie = cookieUtil.createRefreshTokenCookie(loginResponse.getRefreshToken());
+        String refreshTokenCookieHeader = cookieUtil.generateRefreshTokenCookieHeader(loginResponse.getRefreshToken());
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshTokenCookieHeader)
                 .body(ResponseDto.success(loginResponse));
     }
 
@@ -75,10 +74,10 @@ public class AuthController {
     public ResponseEntity<?> refreshToken(
             @Parameter(name = "refresh_token", in = ParameterIn.COOKIE, description = "The refresh token", required = true) HttpServletRequest servletRequest) {
         RefreshTokenResponse refreshTokenResponse = authService.refreshToken(servletRequest);
-        ResponseCookie newRefreshTokenCookie = cookieUtil
-                .createRefreshTokenCookie(refreshTokenResponse.getRefreshToken());
+        String newRefreshTokenCookieHeader = cookieUtil
+                .generateRefreshTokenCookieHeader(refreshTokenResponse.getRefreshToken());
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, newRefreshTokenCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, newRefreshTokenCookieHeader)
                 .body(ResponseDto.success(refreshTokenResponse));
     }
 
@@ -89,9 +88,9 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Not authenticated")
     })
     public ResponseEntity<?> logout(HttpServletRequest request) {
-        ResponseCookie logoutCookie = authService.logout(request);
+        String logoutCookieHeader = authService.logout(request);
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, logoutCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, logoutCookieHeader)
                 .body(ResponseDto.success("Successfully logged out"));
     }
 }
