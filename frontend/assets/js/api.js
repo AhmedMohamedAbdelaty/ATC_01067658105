@@ -1,129 +1,91 @@
 const API_URL = 'http://localhost:8080/api';
 
-async function apiRequest(endpoint, method = 'GET', body = null, requiresAuth = false) {
+let isRefreshingToken = false;
+let tokenRefreshPromise = null;
+
+async function apiRequest(endpoint, method = 'GET', body = null, requiresAuth = true) {
     const headers = {
         'Content-Type': 'application/json'
     };
 
     if (requiresAuth) {
+        await ensureValidAccessToken();
         const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('No authentication token found');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        } else {
             window.location.href = 'login.html';
-            return;
+            throw new Error('Authentication required, but no token available.');
         }
-        headers['Authorization'] = `Bearer ${token}`;
-        console.log('Adding auth header:', `Bearer ${token.substring(0, 10)}...`);
-    }
-
-    const options = {
-        method,
-        headers,
-        credentials: 'include'
-    };
-
-    if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-        options.body = JSON.stringify(body);
     }
 
     try {
-        console.log(`Making ${method} request to ${API_URL}${endpoint}`, body);
-        const response = await fetch(`${API_URL}${endpoint}`, options);
-        console.log(`Response status: ${response.status}`);
-
-        // Unauthorized
-        if (response.status === 401 && requiresAuth) {
-            const refreshed = await refreshToken();
-            if (refreshed) {
-                return apiRequest(endpoint, method, body, requiresAuth);
-            } else {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = 'login.html';
-                return;
-            }
-        }
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : null,
+            credentials: 'include'
+        });
 
         if (response.status === 204) {
-            return { success: true };
+            return { success: true, data: null };
         }
 
-        const data = await response.json();
-        console.log('Response data:', data);
+        const responseData = await response.json();
 
         if (!response.ok) {
-            console.error('API error response:', data);
-            if (data.error) {
-                throw new Error(data.error);
-            } else if (data.message) {
-                throw new Error(data.message);
-            } else {
-                throw new Error(`Request failed with status ${response.status}`);
+            if (response.status === 401 && !endpoint.includes('/auth/refresh')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                if (!window.location.pathname.endsWith('login.html')) {
+                    window.location.href = 'login.html';
+                }
+                throw new Error(responseData.error || 'Unauthorized access - please log in again.');
             }
+            throw new Error(responseData.error || `API request failed with status ${response.status}`);
         }
 
-        return data;
+        return responseData;
+
     } catch (error) {
         console.error('API Request Error:', error);
-        throw error;
+        if (error instanceof Error) {
+            throw error;
+        } else {
+            throw new Error(error.toString());
+        }
     }
 }
 
 const AuthAPI = {
-    login: async (username, password) => {
-        try {
-            const response = await apiRequest('/auth/login', 'POST', { emailOrUsername: username, password });
-            console.log('Login response:', response);
+    login: async (emailOrUsername, password) => {
+        const response = await apiRequest('/auth/login', 'POST', { emailOrUsername, password }, false);
+        if (response.success && response.data.token) {
+            localStorage.setItem('token', response.data.token);
 
-            if (response.success && response.data) {
-                localStorage.setItem('token', response.data.token);
-                console.log('Token stored:', response.data.token.substring(0, 10) + '...');
-
-                // Store user data with roles
-                const userData = {
-                    id: response.data.user.id,
-                    username: response.data.user.username,
-                    email: response.data.user.email,
-                    roles: response.data.user.roles
-                };
-
-                console.log('Storing user data:', userData);
-                localStorage.setItem('user', JSON.stringify(userData));
-
-                // Verify the stored data
-                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-                console.log('Verified stored user data:', storedUser);
-
-                return response.data;
+            if (response.data.user) {
+                localStorage.setItem('user', JSON.stringify(response.data.user));
             }
-            throw new Error(response.message || 'Login failed');
-        } catch (error) {
-            console.error('Login Error:', error);
-            throw error;
+        } else {
+            if (!response.error) {
+                throw new Error(response.message || 'Login failed: Invalid response from server.');
+            }
         }
+        return response;
     },
 
     register: async (username, email, password) => {
-        try {
-            const response = await apiRequest('/auth/register', 'POST', { username, email, password });
-            return response;
-        } catch (error) {
-            console.error('Registration Error:', error);
-            throw error;
-        }
+        return apiRequest('/auth/register', 'POST', { username, email, password }, false);
     },
 
     logout: async () => {
         try {
-            await apiRequest('/auth/logout', 'POST');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            return true;
+            await apiRequest('/auth/logout', 'POST', null, false);
         } catch (error) {
-            console.error('Logout Error:', error);
+            console.error("Logout API call failed:", error);
+        } finally {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            return false;
         }
     }
 };
@@ -160,7 +122,8 @@ const BookingsAPI = {
     },
 
     getUserBookings: async (page = 0, size = 10, sort = 'bookingTime,desc') => {
-        return apiRequest(`/bookings/my?page=${page}&size=${size}&sort=${sort}`, 'GET', null, true);
+        const response = await apiRequest(`/bookings/my?page=${page}&size=${size}&sort=${sort}`, 'GET', null, true);
+        return response;
     },
 
     getBookingById: async (bookingId) => {
@@ -169,42 +132,51 @@ const BookingsAPI = {
 
     cancelBooking: async (bookingId) => {
         return apiRequest(`/bookings/${bookingId}`, 'DELETE', null, true);
+    },
+
+    getAllBookingsForAdmin: async (page = 0, size = 10, sort = 'bookingTime,desc') => {
+        return apiRequest(`/bookings/admin/all?page=${page}&size=${size}&sort=${sort}`, 'GET', null, true);
     }
 };
 
 async function refreshToken() {
-    try {
-        console.log('Attempting to refresh token...');
-        const response = await fetch(`${API_URL}/auth/refresh`, {
-            method: 'POST',
-            credentials: 'include'
-        });
+    if (isRefreshingToken && tokenRefreshPromise) {
+        return tokenRefreshPromise;
+    }
 
-        if (!response.ok) {
-            console.error('Token refresh failed with status:', response.status);
-            return false;
-        }
+    isRefreshingToken = true;
+    tokenRefreshPromise = (async () => {
+        try {
+            const response = await fetch(`${API_URL}/auth/refresh`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {}
+            });
 
-        const data = await response.json();
-        console.log('Token refresh response:', data);
-
-        if (data.success && data.data) {
-            localStorage.setItem('token', data.data.accessToken);
-            console.log('Token refreshed successfully:', data.data.accessToken.substring(0, 10) + '...');
-
-            const storedToken = localStorage.getItem('token');
-            if (!storedToken) {
-                console.error('Failed to store refreshed token in localStorage');
+            if (!response.ok) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
                 return false;
             }
 
-            return true;
-        }
+            const data = await response.json();
 
-        console.error('Token refresh response did not contain expected data');
-        return false;
-    } catch (error) {
-        console.error('Token Refresh Error:', error);
-        return false;
-    }
+            if (data.success && data.data && data.data.accessToken) {
+                localStorage.setItem('token', data.data.accessToken);
+                return true;
+            } else {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                return false;
+            }
+        } catch (error) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            return false;
+        } finally {
+            isRefreshingToken = false;
+            tokenRefreshPromise = null;
+        }
+    })();
+    return tokenRefreshPromise;
 }

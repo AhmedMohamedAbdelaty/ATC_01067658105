@@ -1,8 +1,8 @@
 package com.areeb.event_booking_system.services.auth;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
-import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -63,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtUtil.generateAccessToken(user);
 
         // Create refresh token
-        String refreshTokenString = jwtUtil.generateRefreshToken(user);
+        String refreshTokenString = UUID.randomUUID().toString();
 
         // Save refresh token to database
         RefreshToken refreshToken = RefreshToken.builder()
@@ -126,7 +126,7 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.delete(refreshToken);
 
         String newAccessToken = jwtUtil.generateAccessToken(user);
-        String newRefreshTokenString = jwtUtil.generateRefreshToken(user);
+        String newRefreshTokenString = UUID.randomUUID().toString();
 
         RefreshToken newRefreshToken = RefreshToken.builder()
                 .user(user)
@@ -144,13 +144,13 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public ResponseCookie logout(HttpServletRequest request) {
+    public String logout(HttpServletRequest request) {
         String refreshTokenString = cookieUtil.getRefreshTokenFromCookies(request);
         if (refreshTokenString != null) {
             refreshTokenRepository.findByToken(refreshTokenString)
                     .ifPresent(refreshTokenRepository::delete);
         }
-        return cookieUtil.clearCookie("/api/auth/refresh");
+        return cookieUtil.generateClearRefreshTokenCookieHeader();
     }
 
     @Override

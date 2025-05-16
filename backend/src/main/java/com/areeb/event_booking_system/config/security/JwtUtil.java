@@ -25,7 +25,6 @@ public class JwtUtil {
 
     // Token expiration times
     private static final long ACCESS_TOKEN_EXPIRATION = 15 * 60 * 1000; // 15 minutes
-    private static final long REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
     public JwtUtil(@Value("${jwt.secret}") String secretKey) {
         this.SECRET_KEY = secretKey;
@@ -38,12 +37,6 @@ public class JwtUtil {
     public String generateAccessToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         return createToken(claims, userDetails.getUsername(), ACCESS_TOKEN_EXPIRATION);
-    }
-
-    public String generateRefreshToken(UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("tokenType", "refresh");
-        return createToken(claims, userDetails.getUsername(), REFRESH_TOKEN_EXPIRATION);
     }
 
     private String createToken(Map<String, Object> claims, String subject, long expiration) {

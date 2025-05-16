@@ -1,7 +1,5 @@
 package com.areeb.event_booking_system.services.auth;
 
-import org.springframework.http.ResponseCookie;
-
 import com.areeb.event_booking_system.dtos.auth.AuthDto;
 import com.areeb.event_booking_system.dtos.user.UserDto;
 import com.areeb.event_booking_system.models.auth.RefreshToken;
@@ -15,7 +13,7 @@ public interface AuthService {
 
     AuthDto.RefreshTokenResponse refreshToken(HttpServletRequest request);
 
-    ResponseCookie logout(HttpServletRequest request);
+    String logout(HttpServletRequest request);
 
     RefreshToken findRefreshToken(String token);
 
