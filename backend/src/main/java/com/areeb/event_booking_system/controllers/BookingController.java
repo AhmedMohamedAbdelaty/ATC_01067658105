@@ -82,6 +82,6 @@ public class BookingController {
             @PathVariable UUID bookingId,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) {
         bookingService.cancelBooking(bookingId, currentUser);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ResponseDto.success("Booking cancelled successfully"));
     }
 }
