@@ -152,7 +152,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    @PreAuthorize("hasRole('ADMIN') or @bookingSecurityService.isOwnerOfBooking(authentication, #bookingId)")
+    @PreAuthorize("hasAuthority('BOOKING_MANAGE_ALL') or @bookingSecurityService.isOwnerOfBooking(#bookingId)")
     public BookingDto.BookingResponse getBookingById(UUID bookingId, User currentUser) {
         log.debug("Fetching booking by id: {} for user {}", bookingId, currentUser.getUsername());
         Booking booking = bookingRepository.findById(bookingId)

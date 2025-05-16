@@ -3,6 +3,7 @@ package com.areeb.event_booking_system.services.booking;
 import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +18,9 @@ public class BookingSecurityService {
     private final BookingRepository bookingRepository;
 
     @Transactional(readOnly = true)
-    public boolean isOwnerOfBooking(Authentication authentication, UUID bookingId) {
+    public boolean isOwnerOfBooking(UUID bookingId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
         if (authentication == null || !authentication.isAuthenticated()) {
             return false;
         }
