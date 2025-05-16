@@ -2,6 +2,7 @@ package com.areeb.event_booking_system.dtos.user;
 
 import java.io.Serializable;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -23,6 +24,8 @@ public class UserDto implements Serializable {
         String username;
         @Schema(description = "Email address")
         String email;
+        @Schema(description = "User roles")
+        List<String> roles;
         @Schema(description = "Timestamp of the last login")
         OffsetDateTime lastLogin;
         @Schema(description = "Timestamp of user creation")
