@@ -85,7 +85,7 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
                 eventsContainer.innerHTML += `
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card event-card h-100">
-                            ${isBooked ? '<span class="badge bg-success booked-badge">Booked</span>' : ''}
+                            ${isBooked ? `<a href="event-details.html?id=${event.id}" class="badge bg-success booked-badge booked-badge-link text-decoration-none">Booked</a>` : ''}
                             <img src="${event.imageUrl}" class="card-img-top" alt="${event.name}">
                             <div class="card-body">
                                 <h5 class="card-title">${event.name}</h5>
@@ -106,7 +106,7 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
                             <div class="card-footer">
                                 <div class="d-grid">
                                     ${isBooked
-                                        ? '<button class="btn btn-success" disabled>Booked</button>'
+                                        ? `<a href="event-details.html?id=${event.id}" class="btn btn-success">Booked</a>`
                                         : `<button class="btn btn-outline-primary view-details-btn" data-event-id="${event.id}">View Details</button>`
                                     }
                                 </div>
