@@ -121,6 +121,24 @@ async function loadEventDetails(eventId) {
                 </div>
             `;
 
+            // edit button for admins
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const isAdmin = user.roles && user.roles.some(role =>
+                role === 'ROLE_ADMIN' ||
+                (typeof role === 'object' && role.name === 'ROLE_ADMIN')
+            );
+
+            if (isAdmin) {
+                const actionsContainer = eventDetailsContainer.querySelector('.d-grid.gap-2');
+                if (actionsContainer) {
+                    const editButton = document.createElement('a');
+                    editButton.href = `admin/event-form.html?id=${eventId}`;
+                    editButton.className = 'btn btn-warning mt-2';
+                    editButton.textContent = 'Edit Event';
+                    actionsContainer.appendChild(editButton);
+                }
+            }
+
             if (localStorage.getItem('token') && !isBooked) {
                 const bookNowBtn = document.getElementById('book-now-btn');
                 const confirmBookingBtn = document.getElementById('confirm-booking-btn');
