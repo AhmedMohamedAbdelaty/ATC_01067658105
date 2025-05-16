@@ -51,10 +51,10 @@ public class SecurityConfig {
                         .xssProtection(Customizer.withDefaults())
                         .contentSecurityPolicy(csp -> csp.policyDirectives(
                                 "default-src 'self';" +
-                                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;" +
+                                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;" +
                                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;" +
                                 "font-src 'self' https://cdn.jsdelivr.net data:;" +
-                                "img-src 'self' https://placehold.co https://via.placeholder.com data:;" +
+                                "img-src 'self' https: data:;" +
                                 "connect-src 'self';" +
                                 "form-action 'self';" +
                                 "upgrade-insecure-requests;"
