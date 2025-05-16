@@ -23,26 +23,38 @@ public class JwtUtil {
 
     private final String SECRET_KEY;
 
-    private static final long EXPIRATION_TIME = 86400000; // 24 hours
+    // Token expiration times
+    private static final long ACCESS_TOKEN_EXPIRATION = 15 * 60 * 1000; // 15 minutes
+    private static final long REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
     public JwtUtil(@Value("${jwt.secret}") String secretKey) {
         this.SECRET_KEY = secretKey;
     }
 
     public String generateToken(UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, userDetails.getUsername());
+        return generateAccessToken(userDetails);
     }
 
-    private String createToken(Map<String, Object> claims, String subject) {
+    public String generateAccessToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        return createToken(claims, userDetails.getUsername(), ACCESS_TOKEN_EXPIRATION);
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("tokenType", "refresh");
+        return createToken(claims, userDetails.getUsername(), REFRESH_TOKEN_EXPIRATION);
+    }
+
+    private String createToken(Map<String, Object> claims, String subject, long expiration) {
         final Date now = new Date();
-        final Date expiration = new Date(now.getTime() + EXPIRATION_TIME);
+        final Date expiryDate = new Date(now.getTime() + expiration);
 
         return Jwts.builder()
                 .claims(claims)
                 .subject(subject)
                 .issuedAt(now)
-                .expiration(expiration)
+                .expiration(expiryDate)
                 .signWith(getKey())
                 .compact();
     }
