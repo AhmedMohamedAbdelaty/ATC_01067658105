@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class AuthDto {
 
@@ -58,7 +59,23 @@ public class AuthDto {
         @Schema(description = "JWT token")
         private String token;
 
+        @Schema(description = "refresh token")
+        private String refreshToken;
+
         @Schema(description = "User details")
         private UserDto.UserResponseDto user;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Schema(name = "RefreshTokenResponse", description = "DTO for refresh token response")
+    public static class RefreshTokenResponse {
+        @Schema(description = "New JWT token")
+        private String accessToken;
+
+        @Schema(description = "New refresh token")
+        private String refreshToken;
     }
 }
