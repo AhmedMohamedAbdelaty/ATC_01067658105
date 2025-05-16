@@ -17,15 +17,16 @@ public class CookieUtil {
 
     private static final int REFRESH_TOKEN_DURATION = 7 * 24 * 60 * 60; // 7 days
 
-    public ResponseCookie createRefreshTokenCookie(String token) {
-        return ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, token)
+    public String generateRefreshTokenCookieHeader(String token) {
+        ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, token)
                 .httpOnly(true)
                 .secure(true)
                 .path("/api/auth/refresh")
                 .maxAge(REFRESH_TOKEN_DURATION)
                 .domain(cookieDomain)
-                .sameSite("Strict")
+                .sameSite("None")
                 .build();
+        return cookie.toString() + "; Partitioned";
     }
 
     public String getRefreshTokenFromCookies(HttpServletRequest request) {
@@ -40,14 +41,15 @@ public class CookieUtil {
         return null;
     }
 
-    public ResponseCookie clearCookie(String path) {
-        return ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
+    public String generateClearRefreshTokenCookieHeader() {
+        ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(true)
-                .path(path)
+                .path("/api/auth/refresh")
                 .maxAge(0)
                 .domain(cookieDomain)
-                .sameSite("Strict")
+                .sameSite("None")
                 .build();
+        return cookie.toString() + "; Partitioned";
     }
 }
