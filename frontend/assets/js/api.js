@@ -8,10 +8,12 @@ async function apiRequest(endpoint, method = 'GET', body = null, requiresAuth = 
     if (requiresAuth) {
         const token = localStorage.getItem('token');
         if (!token) {
+            console.error('No authentication token found');
             window.location.href = 'login.html';
             return;
         }
         headers['Authorization'] = `Bearer ${token}`;
+        console.log('Adding auth header:', `Bearer ${token.substring(0, 10)}...`);
     }
 
     const options = {
@@ -50,12 +52,13 @@ async function apiRequest(endpoint, method = 'GET', body = null, requiresAuth = 
         console.log('Response data:', data);
 
         if (!response.ok) {
+            console.error('API error response:', data);
             if (data.error) {
                 throw new Error(data.error);
             } else if (data.message) {
                 throw new Error(data.message);
             } else {
-                throw new Error('Something went wrong');
+                throw new Error(`Request failed with status ${response.status}`);
             }
         }
 
@@ -74,6 +77,7 @@ const AuthAPI = {
 
             if (response.success && response.data) {
                 localStorage.setItem('token', response.data.token);
+                console.log('Token stored:', response.data.token.substring(0, 10) + '...');
 
                 // Store user data with roles
                 const userData = {
@@ -85,6 +89,11 @@ const AuthAPI = {
 
                 console.log('Storing user data:', userData);
                 localStorage.setItem('user', JSON.stringify(userData));
+
+                // Verify the stored data
+                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                console.log('Verified stored user data:', storedUser);
+
                 return response.data;
             }
             throw new Error(response.message || 'Login failed');
@@ -165,21 +174,27 @@ const BookingsAPI = {
 
 async function refreshToken() {
     try {
+        console.log('Attempting to refresh token...');
         const response = await fetch(`${API_URL}/auth/refresh`, {
             method: 'POST',
             credentials: 'include'
         });
 
         if (!response.ok) {
+            console.error('Token refresh failed with status:', response.status);
             return false;
         }
 
         const data = await response.json();
+        console.log('Token refresh response:', data);
+
         if (data.success && data.data) {
             localStorage.setItem('token', data.data.accessToken);
+            console.log('Token refreshed successfully');
             return true;
         }
 
+        console.error('Token refresh response did not contain expected data');
         return false;
     } catch (error) {
         console.error('Token Refresh Error:', error);
