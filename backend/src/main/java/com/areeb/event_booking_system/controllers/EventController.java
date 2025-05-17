@@ -111,8 +111,7 @@ public class EventController {
             @PathVariable UUID eventId,
             @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) {
         eventService.deleteEvent(eventId, currentUser);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .body(ResponseDto.success("Event deleted successfully."));
+        return ResponseEntity.ok(ResponseDto.success("Event deleted successfully."));
     }
 
     @PostMapping(value = "/{eventId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
