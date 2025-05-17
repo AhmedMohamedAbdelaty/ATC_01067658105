@@ -25,7 +25,5 @@ export function middleware(request: NextRequest) {
 
 // Configure the matcher to only run middleware on API proxy routes
 export const config = {
-    matcher: [
-        '/((?!api/proxy|_next/static|_next/image|favicon.ico).*)',
-    ],
+  matcher: '/api/proxy/:path*',
 };
