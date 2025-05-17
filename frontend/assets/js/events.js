@@ -57,12 +57,26 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
             eventsContainer.innerHTML = '';
             let eventsHTML = '';
 
-            // Add card for each event
+            const defaultImageUrl = 'assets/images/event-placeholder.jpg';
+            const apiBaseUrl = getApiBaseUrl().replace('/api', '');
+
+
             events.forEach(event => {
                 const isBookedByCurrentUser = event.isCurrentUserBooked;
                 const isFull = event.maxCapacity !== null && event.currentBookingsCount >= event.maxCapacity;
                 const eventDate = new Date(event.eventDate);
-                const imageUrl = event.imageUrl && event.imageUrl.startsWith('http') ? event.imageUrl : 'https://archive.org/download/placeholder-image/placeholder-image.jpg';
+
+                let imageUrl;
+                if (event.imageUrl) {
+                    if (event.imageUrl.startsWith('http')) {
+                        imageUrl = event.imageUrl;
+                    }
+                    else {
+                        imageUrl = apiBaseUrl + event.imageUrl;
+                    }
+                } else {
+                    imageUrl = defaultImageUrl;
+                }
 
                 let badgeHTML = '';
                 if (isBookedByCurrentUser) {
@@ -84,7 +98,7 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card event-card h-100 position-relative">
                             ${badgeHTML}
-                            <img src="${imageUrl}" class="card-img-top" alt="${event.name}" style="margin-top: ${badgeHTML ? '1.5rem' : '0'};">
+                            <img src="${imageUrl}" class="card-img-top" alt="${event.name}" onerror="this.onerror=null; this.src='${defaultImageUrl}';" style="height: 200px; object-fit: cover; margin-top: ${badgeHTML ? '1.5rem' : '0'};">
                             <div class="card-body">
                                 <h5 class="card-title">${event.name}</h5>
                                 <p class="card-text text-truncate">${event.description || 'No description available.'}</p>
