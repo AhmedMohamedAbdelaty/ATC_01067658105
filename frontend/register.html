@@ -44,6 +44,7 @@
                     </div>
                     <div class="card-body">
                         <div class="alert alert-danger" id="error-message" style="display: none;"></div>
+                        <div class="alert alert-success" id="success-message" style="display: none;"></div>
                         <form id="register-form">
                             <div class="mb-3">
                                 <label for="username" class="form-label">Username</label>
@@ -62,7 +63,10 @@
                                 <input type="password" class="form-control" id="confirm-password" required>
                             </div>
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-primary">Register</button>
+                                <button type="submit" class="btn btn-primary" id="register-button">
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                                    Register
+                                </button>
                             </div>
                         </form>
                         <div class="mt-3 text-center">
