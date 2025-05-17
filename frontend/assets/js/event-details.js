@@ -179,9 +179,22 @@ async function loadEventDetails(eventId) {
                         bookingModal.hide();
 
                         if (bookingResponse.success) {
-                            successModal.show();
+                            const eventNameParam = encodeURIComponent(event.name);
+                            const eventDateParam = encodeURIComponent(eventDate.toISOString());
+                            const eventVenueParam = encodeURIComponent(event.venue);
+
+                            let bookingIdParam = '';
+                            if (bookingResponse.data && bookingResponse.data.id) {
+                                bookingIdParam = encodeURIComponent(bookingResponse.data.id);
+                            }
+
+                            let redirectUrl = `../congratulations.html?eventName=${eventNameParam}&eventDate=${eventDateParam}&eventVenue=${eventVenueParam}`;
+                            if (bookingIdParam) {
+                                redirectUrl += `&bookingId=${bookingIdParam}`;
+                            }
+                            window.location.href = redirectUrl;
                         } else {
-                            alert('Booking failed. Please try again.');
+                            alert('Booking failed. Please try again. ' + (bookingResponse.error || ''));
                         }
                     } catch (error) {
                         console.error('Booking error:', error);
