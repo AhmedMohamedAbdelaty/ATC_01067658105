@@ -1,9 +1,9 @@
 const getApiBaseUrl = () => {
-    if (window.location.hostname.includes('koyeb.app') || !window.location.hostname.includes('localhost')) {
-        return `${window.location.origin}/api`;
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:8080/api';
     }
-    // local
-    return 'http://localhost:8080/api';
+    return `${window.location.origin}/api`;
 };
 
 const API_URL = getApiBaseUrl();
