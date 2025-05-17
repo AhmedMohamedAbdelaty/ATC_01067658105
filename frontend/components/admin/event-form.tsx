@@ -37,8 +37,16 @@ const eventFormSchema = z.object({
         z.number().min(0, 'Price must be a positive number')
     ),
     maxCapacity: z.preprocess(
-        (val) => (String(val).trim() === '' ? null : parseInt(String(val), 10)),
-        z.number().int().positive('Max capacity must be a positive integer').nullable()
+        (val) => {
+            const stringVal = String(val).trim();
+            if (stringVal === '') return null;
+            const parsed = parseInt(stringVal, 10);
+            return isNaN(parsed) ? null : parsed;
+        },
+        z.union([
+            z.number().int().positive('Max capacity must be a positive integer'),
+            z.null()
+        ])
     ),
     isRecurring: z.boolean().default(false),
     recurringPattern: z.string().optional(),
@@ -219,13 +227,14 @@ export default function EventForm({ eventId }: EventFormProps) {
         setIsLoading(true);
         try {
             let response;
-            const payload = {
+                            const payload = {
                 ...data,
                 // Append seconds and Z for UTC to meet OffsetDateTime format requirements
                 eventDate: data.eventDate ? `${data.eventDate}:00Z` : null,
                 registrationDeadline: data.hasRegistrationDeadline && data.registrationDeadline
                     ? `${data.registrationDeadline}:00Z`
                     : null,
+                // maxCapacity is already handled by the schema processor
             };
 
             if (eventId) {
@@ -292,7 +301,36 @@ export default function EventForm({ eventId }: EventFormProps) {
     ];
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={handleSubmit(
+            onSubmit,
+            (errors) => {
+                // Redirect to the tab with errors
+                if (errors.name || errors.description || errors.category || errors.eventDate) {
+                    setActiveTab('basic');
+                    toast({
+                        title: "Validation Error",
+                        description: "Please check the Basic Information section for errors",
+                        variant: "destructive"
+                    });
+                } else if (errors.venue || errors.onlineEventUrl || errors.price ||
+                          errors.maxCapacity || errors.registrationDeadline) {
+                    setActiveTab('details');
+                    toast({
+                        title: "Validation Error",
+                        description: "Please check the Event Details section for errors",
+                        variant: "destructive"
+                    });
+                } else if (errors.isRecurring || errors.recurringPattern ||
+                          errors.isFeatured || errors.tags) {
+                    setActiveTab('advanced');
+                    toast({
+                        title: "Validation Error",
+                        description: "Please check the Advanced Settings section for errors",
+                        variant: "destructive"
+                    });
+                }
+            }
+        )} className="space-y-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
                     <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full md:w-fit">
@@ -622,7 +660,16 @@ export default function EventForm({ eventId }: EventFormProps) {
                                                 className="h-12"
                                                 {...field}
                                                 value={field.value === null ? '' : String(field.value)}
-                                                onChange={e => field.onChange(e.target.value === '' ? null : parseInt(e.target.value, 10))}
+                                                onChange={e => {
+                                                    if (e.target.value === '') {
+                                                        field.onChange(null);
+                                                    } else {
+                                                        const parsed = parseInt(e.target.value, 10);
+                                                        if (!isNaN(parsed)) {
+                                                            field.onChange(parsed);
+                                                        }
+                                                    }
+                                                }}
                                             />
                                         )}
                                     />
