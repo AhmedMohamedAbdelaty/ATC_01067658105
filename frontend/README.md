@@ -1,33 +1,34 @@
-# Frontend Instructions: Event Booking System
+# Frontend
 
-## Tech stack
+This project was bootstrapped with Next.js.
 
-- HTML
-- CSS
-- JS
-- Bootstrap
+## Getting Started
 
-## Setup Instructions
+First, navigate to the frontend directory:
+```bash
+cd frontend
+```
 
-1. Make sure the backend server is running at `http://localhost:8080`
+Then, install the project dependencies:
 
-2. Open the frontend in a web browser:
-     you can use Node:
-     ```
-     cd frontend
-     npx serve
-     ```
-     or you can use Python:
-     ```
-     cd frontend
-     python -m http.server 3000
-     ```
-     or you can use the provided script:
-     ```
-     cd frontend
-     chmod +x run-server.sh
-     ./run-server.sh
-     ```
-     or simply open the html files directly in your browser
+```bash
+pnpm install
+```
 
-3. The application will be available at `http://localhost:3000` if you used a server.
+Finally, run the development server:
+
+```bash
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+## Using Other Package Managers
+
+This project uses `pnpm` as indicated by the `pnpm-lock.yaml` file. If you prefer to use `npm` or `yarn`:
+
+1.  Delete the `pnpm-lock.yaml` file.
+2.  Run `npm install` or `yarn install` to install dependencies with your chosen package manager.
+3.  Replace `pnpm` in the commands above with `npm run` (e.g., `npm run dev`) or `yarn` (e.g., `yarn dev`).
