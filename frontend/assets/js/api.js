@@ -1,4 +1,12 @@
-const API_URL = 'http://localhost:8080/api';
+const getApiBaseUrl = () => {
+    if (window.location.hostname.includes('koyeb.app') || !window.location.hostname.includes('localhost')) {
+        return `${window.location.origin}/api`;
+    }
+    // local
+    return 'http://localhost:8080/api';
+};
+
+const API_URL = getApiBaseUrl();
 
 let isRefreshingToken = false;
 let tokenRefreshPromise = null;
