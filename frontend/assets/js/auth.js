@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const token = localStorage.getItem('token');
         if (token && !isTokenExpired(token)) {
             if (currentPath === 'login.html' || currentPath === 'register.html') {
-                window.location.href = 'index.html';
+                window.location.href = 'events.html';
                 return;
             }
         }
@@ -170,7 +170,7 @@ function setupLoginForm() {
                     localStorage.setItem('token', response.data.token);
                     localStorage.setItem('user', JSON.stringify(response.data.user));
                     checkAuthStatus();
-                    window.location.href = 'index.html';
+                    window.location.href = 'events.html';
                 } else {
                     errorMessageDiv.textContent = (response && response.error) ? response.error : 'Login failed. Please check your credentials.';
                     errorMessageDiv.style.display = 'block';

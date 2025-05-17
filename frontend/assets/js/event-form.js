@@ -152,7 +152,7 @@ function setupEventForm() {
                 }
             }
 
-            window.location.href = 'index.html';
+            window.location.href = '../admin/index.html';
 
         } catch (error) {
             console.error('Event save error:', error);

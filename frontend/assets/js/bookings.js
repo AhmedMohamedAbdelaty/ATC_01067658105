@@ -32,7 +32,7 @@ async function loadUserBookings(page = 0, size = 10, sort = 'bookingTime,desc') 
                         <h4 class="alert-heading">No Bookings Found</h4>
                         <p>You haven't booked any events yet.</p>
                         <hr>
-                        <a href="index.html" class="btn btn-primary">Browse Events</a>
+                        <a href="events.html" class="btn btn-primary">Browse Events</a>
                     </div>
                 `;
                 paginationContainer.innerHTML = '';

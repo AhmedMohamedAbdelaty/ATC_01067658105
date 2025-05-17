@@ -115,7 +115,7 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
                                     </small>
                                 </div>
                                 <div class="mt-2">
-                                    <small class="text-muted">Available Spots: ${event.maxCapacity ? (event.maxCapacity - event.currentBookingsCount) : 'Unlimited'} / ${event.maxCapacity || 'Unlimited'}</small>
+                                    <small class="text-muted">Available Spots: ${event.maxCapacity ? (event.maxCapacity - event.currentBookingsCount) : 'Unlimited'}</small>
                                 </div>
                             </div>
                             <div class="card-footer">
