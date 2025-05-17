@@ -119,7 +119,7 @@ async function loadEventDetails(eventId) {
                             ` : `
                                 <button id="book-now-btn" class="btn btn-primary">Book Now</button>
                             `}
-                            <a href="index.html" class="btn btn-outline-secondary">Back to Events</a>
+                            <a href="events.html" class="btn btn-outline-secondary">Back to Events</a>
                         </div>
                     </div>
                 </div>
@@ -212,7 +212,7 @@ async function loadEventDetails(eventId) {
                     <h4 class="alert-heading">Event Not Found</h4>
                     <p>The event you're looking for doesn't exist or has been removed.</p>
                     <hr>
-                    <a href="index.html" class="btn btn-primary">Back to Events</a>
+                    <a href="events.html" class="btn btn-primary">Back to Events</a>
                 </div>
             `;
         }
@@ -223,7 +223,7 @@ async function loadEventDetails(eventId) {
                 <h4 class="alert-heading">Error</h4>
                 <p>Failed to load event details. Please try again later.</p>
                 <hr>
-                <a href="index.html" class="btn btn-primary">Back to Events</a>
+                <a href="events.html" class="btn btn-primary">Back to Events</a>
             </div>
         `;
     }
