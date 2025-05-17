@@ -6,6 +6,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             ''
     ]
     const currentPath = window.location.pathname.split('/').pop();
+    const isInAdminSection = window.location.pathname.includes('/admin/');
+
+    if (isInAdminSection) {
+        setupLogoutButton();
+        return;
+    }
 
     // public
     if (publicPages.includes(currentPath)) {
@@ -37,7 +43,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.error('Authentication error on protected page:', error.message);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        if (!window.location.pathname.endsWith('login.html')) {
+
+        if (isInAdminSection) {
+            window.location.href = '../login.html';
+        } else if (!window.location.pathname.endsWith('login.html')) {
             window.location.href = 'login.html';
         }
     }
@@ -68,6 +77,9 @@ function isTokenExpired(token) {
 
 async function ensureValidAccessToken() {
     let token = localStorage.getItem('token');
+    if (!token) {
+        throw new Error('No authentication token found');
+    }
 
     const expired = isTokenExpired(token);
 
@@ -76,13 +88,17 @@ async function ensureValidAccessToken() {
         if (!refreshed) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            if (!window.location.pathname.endsWith('login.html') && !window.location.pathname.endsWith('register.html')) {
+
+            const isInAdminSection = window.location.pathname.includes('/admin/');
+            if (isInAdminSection) {
+                window.location.href = '../login.html';
+            } else if (!window.location.pathname.endsWith('login.html') && !window.location.pathname.endsWith('register.html')) {
                 window.location.href = 'login.html';
             }
+
             throw new Error('Token refresh failed and redirecting.');
         }
         token = localStorage.getItem('token');
-    } else {
     }
 }
 
@@ -128,7 +144,13 @@ function setupLogoutButton() {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 checkAuthStatus();
-                window.location.href = 'login.html';
+
+                const isInAdminSection = window.location.pathname.includes('/admin/');
+                if (isInAdminSection) {
+                    window.location.href = '../login.html';
+                } else {
+                    window.location.href = 'login.html';
+                }
             } catch (error) {
                 console.error('Logout failed:', error);
                 alert('Logout failed. Please try again.');

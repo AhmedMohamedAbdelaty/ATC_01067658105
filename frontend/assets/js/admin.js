@@ -30,11 +30,18 @@ async function handleDeleteEvent() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if admin
+    const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    if (!token || isTokenExpired(token)) {
+        console.log('No valid token found, redirecting to login');
+        window.location.href = '../login.html';
+        return;
+    }
+
     console.log('Admin check - User data:', user);
 
-    const isAdmin = user.roles && user.roles.some(role =>
+    const isAdmin = user && user.roles && user.roles.some(role =>
         role === 'ROLE_ADMIN' ||
         (typeof role === 'object' && role.name === 'ROLE_ADMIN')
     );
@@ -42,8 +49,8 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Is admin:', isAdmin);
 
     if (!isAdmin) {
-        // go home if not admin
-        window.location.href = 'index.html';
+        console.log('Not an admin, redirecting to home');
+        window.location.href = '../index.html';
         return;
     }
 
@@ -51,6 +58,23 @@ document.addEventListener('DOMContentLoaded', function() {
         loadEventsForAdmin();
     }
 });
+
+function isTokenExpired(token) {
+    if (!token) {
+        return true;
+    }
+    try {
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        if (!decoded || !decoded.exp) {
+            return true;
+        }
+        const currentTime = Math.floor(Date.now() / 1000);
+        return decoded.exp < currentTime;
+    } catch (e) {
+        console.error('Error decoding token:', e);
+        return true;
+    }
+}
 
 async function loadEventsForAdmin(page = 0, size = 10, sort = 'eventDate,asc') {
     const eventsTableBody = document.getElementById('events-table-body');
