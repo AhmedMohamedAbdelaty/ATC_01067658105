@@ -51,21 +51,30 @@ public class SecurityConfig {
                         .xssProtection(Customizer.withDefaults())
                         .contentSecurityPolicy(csp -> csp.policyDirectives(
                                 "default-src 'self';" +
-                                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;" +
-                                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;" +
-                                "font-src 'self' https://cdn.jsdelivr.net data:;" +
-                                "img-src 'self' https: data:;" +
-                                "connect-src 'self';" +
-                                "form-action 'self';" +
-                                "upgrade-insecure-requests;"
-                                )))
+                                        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;" +
+                                        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;" +
+                                        "font-src 'self' https://cdn.jsdelivr.net data:;" +
+                                        "img-src 'self' https: data:;" +
+                                        "connect-src 'self';" +
+                                        "form-action 'self';" +
+                                        "upgrade-insecure-requests;")))
                 .build();
     }
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(SecurityConstants.ALLOWED_ORIGINS);
+
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:8080",
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "https://zesty-maire-ahmed-muhammed-e26b0e5b.koyeb.app",
+                "https://*.koyeb.app",
+                "https://*.lite.vusercontent.net",
+                "https://*.v0.dev",
+                "https://*.vercel.app"));
+
         configuration.setAllowedMethods(SecurityConstants.ALLOWED_METHODS);
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
