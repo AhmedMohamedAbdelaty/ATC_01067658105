@@ -6,13 +6,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             ''
     ]
     const currentPath = window.location.pathname.split('/').pop();
+    const isInAdminSection = window.location.pathname.includes('/admin/');
+
+    if (isInAdminSection) {
+        setupLogoutButton();
+        return;
+    }
 
     // public
     if (publicPages.includes(currentPath)) {
         const token = localStorage.getItem('token');
-        if (token && !isTokenExpired(token)) {
+        if (token && !TokenUtils.isTokenExpired(token)) {
             if (currentPath === 'login.html' || currentPath === 'register.html') {
-                window.location.href = 'index.html';
+                window.location.href = 'events.html';
                 return;
             }
         }
@@ -37,55 +43,41 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.error('Authentication error on protected page:', error.message);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        if (!window.location.pathname.endsWith('login.html')) {
+
+        if (isInAdminSection) {
+            window.location.href = '../login.html';
+        } else if (!window.location.pathname.endsWith('login.html')) {
             window.location.href = 'login.html';
         }
     }
 });
 
-function parseJwt(token) {
-    try {
-        return JSON.parse(atob(token.split('.')[1]));
-    } catch (e) {
-        return null;
-    }
-}
-
-function isTokenExpired(token) {
-    if (!token) {
-        return true;
-    }
-    const decoded = parseJwt(token);
-    if (!decoded || !decoded.exp) {
-        return true;
-    }
-    const currentTime = Math.floor(Date.now() / 1000);
-    const expiryTime = decoded.exp;
-    const isExpired = expiryTime < currentTime;
-
-    return isExpired;
-}
-
 async function ensureValidAccessToken() {
     let token = localStorage.getItem('token');
+    if (!token) {
+        throw new Error('No authentication token found');
+    }
 
-    const expired = isTokenExpired(token);
+    const expired = TokenUtils.isTokenExpired(token);
 
     if (expired) {
         const refreshed = await refreshToken();
         if (!refreshed) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            if (!window.location.pathname.endsWith('login.html') && !window.location.pathname.endsWith('register.html')) {
+
+            const isInAdminSection = window.location.pathname.includes('/admin/');
+            if (isInAdminSection) {
+                window.location.href = '../login.html';
+            } else if (!window.location.pathname.endsWith('login.html') && !window.location.pathname.endsWith('register.html')) {
                 window.location.href = 'login.html';
             }
+
             throw new Error('Token refresh failed and redirecting.');
         }
         token = localStorage.getItem('token');
-    } else {
     }
 }
-
 
 function checkAuthStatus() {
     const token = localStorage.getItem('token');
@@ -96,24 +88,40 @@ function checkAuthStatus() {
     const adminOnlyElements = document.querySelectorAll('.admin-only');
     const userGreetingElement = document.getElementById('user-greeting');
 
-    if (token && user && !isTokenExpired(token)) {
-        loggedOutElements.forEach(el => el.style.display = 'none');
-        loggedInElements.forEach(el => el.style.display = 'list-item');
+    if (token && user && !TokenUtils.isTokenExpired(token)) {
+        loggedOutElements.forEach(el => (el.style.display = 'none'));
+        loggedInElements.forEach(el => (el.style.display = 'list-item'));
 
         if (userGreetingElement) {
             userGreetingElement.textContent = `Welcome, ${user.username}!`;
             userGreetingElement.style.display = 'block';
         }
 
-        const isAdminUser = user.roles && user.roles.includes('ROLE_ADMIN');
-        adminOnlyElements.forEach(el => el.style.display = isAdminUser ? 'list-item' : 'none');
-
+        if (user && user.roles) {
+            const isAdmin = user.roles.some(role => role === 'ROLE_ADMIN' || (typeof role === 'object' && role.name === 'ROLE_ADMIN'));
+            if (adminOnlyElements.length > 0) {
+                adminOnlyElements.forEach(el => (el.style.display = isAdmin ? 'list-item' : 'none'));
+            }
+            const adminPanelLink = document.querySelector('a[href="admin/index.html"]');
+            if (adminPanelLink && adminPanelLink.parentElement.classList.contains('admin-only')) {
+                adminPanelLink.parentElement.style.display = isAdmin ? 'block' : 'none';
+            }
+        }
     } else {
-        loggedOutElements.forEach(el => el.style.display = 'list-item');
-        loggedInElements.forEach(el => el.style.display = 'none');
-        adminOnlyElements.forEach(el => el.style.display = 'none');
+        loggedOutElements.forEach(el => (el.style.display = 'list-item'));
+        loggedInElements.forEach(el => (el.style.display = 'none'));
+        adminOnlyElements.forEach(el => (el.style.display = 'none'));
         if (userGreetingElement) {
             userGreetingElement.style.display = 'none';
+        }
+    }
+
+    const protectedPaths = ['/events.html', '/my-bookings.html', '/event-details.html'];
+    const currentPath = window.location.pathname;
+
+    if (protectedPaths.some(path => currentPath.endsWith(path))) {
+        if (!token || TokenUtils.isTokenExpired(token)) {
+            window.location.href = 'login.html';
         }
     }
 }
@@ -121,14 +129,20 @@ function checkAuthStatus() {
 function setupLogoutButton() {
     const logoutButton = document.getElementById('logout-btn');
     if (logoutButton) {
-        logoutButton.addEventListener('click', async function(event) {
+        logoutButton.addEventListener('click', async function (event) {
             event.preventDefault();
             try {
                 await AuthAPI.logout();
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 checkAuthStatus();
-                window.location.href = 'login.html';
+
+                const isInAdminSection = window.location.pathname.includes('/admin/');
+                if (isInAdminSection) {
+                    window.location.href = '../login.html';
+                } else {
+                    window.location.href = 'login.html';
+                }
             } catch (error) {
                 console.error('Logout failed:', error);
                 alert('Logout failed. Please try again.');
@@ -143,7 +157,7 @@ function setupLoginForm() {
     const spinner = loginButton ? loginButton.querySelector('.spinner-border') : null;
 
     if (loginForm && loginButton && spinner) {
-        loginForm.addEventListener('submit', async function(event) {
+        loginForm.addEventListener('submit', async function (event) {
             event.preventDefault();
             const emailOrUsernameInput = document.getElementById('username');
             const passwordInput = document.getElementById('password');
@@ -151,7 +165,7 @@ function setupLoginForm() {
 
             if (!emailOrUsernameInput || !passwordInput || !errorMessageDiv) {
                 if (errorMessageDiv) {
-                    errorMessageDiv.textContent = "error occurred with the login form.";
+                    errorMessageDiv.textContent = 'error occurred with the login form.';
                     errorMessageDiv.style.display = 'block';
                 }
                 return;
@@ -170,9 +184,9 @@ function setupLoginForm() {
                     localStorage.setItem('token', response.data.token);
                     localStorage.setItem('user', JSON.stringify(response.data.user));
                     checkAuthStatus();
-                    window.location.href = 'index.html';
+                    window.location.href = 'events.html';
                 } else {
-                    errorMessageDiv.textContent = (response && response.error) ? response.error : 'Login failed. Please check your credentials.';
+                    errorMessageDiv.textContent = response && response.error ? response.error : 'Login failed. Please check your credentials.';
                     errorMessageDiv.style.display = 'block';
                 }
             } catch (error) {
@@ -197,7 +211,7 @@ function setupRegisterForm() {
     const successMessageDiv = document.getElementById('success-message');
 
     if (registerForm && registerButton && spinner && errorMessageDiv && successMessageDiv) {
-        registerForm.addEventListener('submit', async function(event) {
+        registerForm.addEventListener('submit', async function (event) {
             event.preventDefault();
 
             const usernameInput = document.getElementById('username');
@@ -209,7 +223,7 @@ function setupRegisterForm() {
             successMessageDiv.style.display = 'none';
 
             if (!usernameInput || !emailInput || !passwordInput || !confirmPasswordInput) {
-                errorMessageDiv.textContent = "Error occurred with the registration form elements.";
+                errorMessageDiv.textContent = 'Error occurred with the registration form elements.';
                 errorMessageDiv.style.display = 'block';
                 return;
             }
@@ -220,7 +234,7 @@ function setupRegisterForm() {
             const confirmPassword = confirmPasswordInput.value;
 
             if (password !== confirmPassword) {
-                errorMessageDiv.textContent = "Passwords do not match.";
+                errorMessageDiv.textContent = 'Passwords do not match.';
                 errorMessageDiv.style.display = 'block';
                 return;
             }
@@ -240,7 +254,7 @@ function setupRegisterForm() {
                         window.location.href = 'login.html';
                     }, 3000);
                 } else {
-                    errorMessageDiv.textContent = (response && response.error) ? response.error : 'Registration failed. Please try again.';
+                    errorMessageDiv.textContent = response && response.error ? response.error : 'Registration failed. Please try again.';
                     errorMessageDiv.style.display = 'block';
                 }
             } catch (error) {
@@ -258,7 +272,6 @@ function setupRegisterForm() {
         console.error('Could not setup register form');
     }
 }
-
 
 function isAdminPage() {
     const adminPaths = [
