@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', async function() {
     const publicPages = [
             'login.html',
-            'register.html'
+            'register.html',
+            'index.html',
+            ''
     ]
     const currentPath = window.location.pathname.split('/').pop();
 
