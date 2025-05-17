@@ -21,9 +21,7 @@ RUN groupadd --system appuser && useradd --system --gid appuser appuser
 
 COPY --from=backend-builder /app/backend/target/ebs.jar ./ebs.jar
 
-RUN mkdir -p ./static-content
-COPY ./frontend ./static-content/
-
+RUN mkdir -p ./uploads/event-images
 RUN chown -R appuser:appuser /app
 
 USER appuser
