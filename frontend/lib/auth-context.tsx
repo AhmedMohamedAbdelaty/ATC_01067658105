@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 
 // Define API URL with proper fallback
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/proxy';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Define role type
 type Role = string | { name: string; [key: string]: any };

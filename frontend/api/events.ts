@@ -10,8 +10,8 @@ interface EventData {
     [key: string]: any;
 }
 
-// Use direct API URL instead of proxy
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+// Use direct API URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://zesty-maire-ahmed-muhammed-e26b0e5b.koyeb.app/api";
 
 async function apiRequest(endpoint: string, method = "GET", body: any = null, requiresAuth = true) {
     const headers: Record<string, string> = {

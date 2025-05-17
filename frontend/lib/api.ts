@@ -1,7 +1,6 @@
 import { toast } from "@/components/ui/use-toast"
 
-// Use relative URL for API requests to use our proxy
-const API_URL = "/api/proxy"
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 // Keep the original API base URL for assets
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"
 
@@ -297,8 +296,8 @@ export const BookingsAPI = {
       // If it doesn't throw, the operation was successful at the HTTP level.
       const responseData = await apiRequest(`/bookings/${bookingId}`, "DELETE", null, true);
 
-      // Assuming successful DELETE by proxy might return { success: true, ... } or just be a 204/200
-      // The proxy normalizes DELETE to return JSON, e.g. { success: true, message: "..." }
+      // Assuming successful DELETE might return { success: true, ... } or just be a 204/200
+      // Backend will normalize the response to JSON format
       if (responseData && (responseData.success || responseData.message)) {
         toast({
           title: "Booking Cancelled",
