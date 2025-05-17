@@ -18,9 +18,6 @@ async function apiRequest(endpoint: string, method = "GET", body: any = null, re
     const token = localStorage.getItem("token")
     if (token) {
       headers["Authorization"] = `Bearer ${token}`
-    } else {
-      window.location.href = "/login"
-      throw new Error("Authentication required, but no token available.")
     }
   }
 
@@ -33,13 +30,28 @@ async function apiRequest(endpoint: string, method = "GET", body: any = null, re
       headers,
       body: body ? JSON.stringify(body) : null,
       credentials: "include",
+      cache: "no-store"
     })
 
     if (response.status === 204) {
       return { success: true, data: null }
     }
 
-    const responseData = await response.json()
+    // Handle empty responses
+    const responseText = await response.text()
+    if (!responseText) {
+      console.log("Empty response from API")
+      return { success: true, data: null }
+    }
+
+    // Try to parse the response as JSON
+    let responseData
+    try {
+      responseData = JSON.parse(responseText)
+    } catch (error) {
+      console.error("Failed to parse API response:", responseText)
+      throw new Error(`API response is not valid JSON: ${responseText.substring(0, 100)}...`)
+    }
 
     if (!response.ok) {
       if (response.status === 401 && !endpoint.includes("/auth/refresh")) {
@@ -79,17 +91,12 @@ async function apiFormDataRequest(
   formData: FormData | null = null,
   requiresAuth = true,
 ) {
-  // For form data requests, we need to forward the FormData directly without converting to JSON
   const headers: Record<string, string> = {}
 
   if (requiresAuth) {
-    await ensureValidAccessToken()
     const token = localStorage.getItem("token")
     if (token) {
       headers["Authorization"] = `Bearer ${token}`
-    } else {
-      window.location.href = "/login"
-      throw new Error("Authentication required, but no token available.")
     }
   }
 
@@ -97,48 +104,42 @@ async function apiFormDataRequest(
   console.log(`Making API FormData request to: ${url}`)
 
   try {
-    // Use FormData directly - don't add Content-Type header, browser will set it with boundary
     const response = await fetch(url, {
       method,
       headers,
       body: formData,
       credentials: "include",
+      cache: "no-store"
     })
 
     if (response.status === 204) {
       return { success: true, data: null }
     }
 
-    const responseData = await response.json()
+    // Handle empty responses
+    const responseText = await response.text()
+    if (!responseText) {
+      console.log("Empty response from API")
+      return { success: true, data: null }
+    }
+
+    // Try to parse the response as JSON
+    let responseData
+    try {
+      responseData = JSON.parse(responseText)
+    } catch (error) {
+      console.error("Failed to parse API response:", responseText)
+      throw new Error(`API response is not valid JSON: ${responseText.substring(0, 100)}...`)
+    }
 
     if (!response.ok) {
-      if (response.status === 401 && !endpoint.includes("/auth/refresh")) {
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        if (typeof window !== "undefined" && !window.location.pathname.endsWith("login")) {
-          window.location.href = "/login"
-        }
-        throw new Error(responseData.error || "Unauthorized access - please log in again.")
-      }
       throw new Error(responseData.error || `API request failed with status ${response.status}`)
     }
 
     return responseData
   } catch (error) {
     console.error("API FormData Request Error:", error)
-
-    if (error instanceof TypeError && error.message.includes("fetch")) {
-      console.error("Network error - Check if the API server is running and accessible")
-      throw new Error(
-        "Network error - Unable to connect to the API server. Please check your internet connection or try again later.",
-      )
-    }
-
-    if (error instanceof Error) {
-      throw error
-    } else {
-      throw new Error(String(error))
-    }
+    throw error
   }
 }
 

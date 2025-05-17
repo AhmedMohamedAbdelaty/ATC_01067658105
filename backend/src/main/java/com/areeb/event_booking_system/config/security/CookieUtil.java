@@ -21,12 +21,11 @@ public class CookieUtil {
         ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, token)
                 .httpOnly(true)
                 .secure(true)
-                .path("/api/auth/refresh")
+                .path("/")
                 .maxAge(REFRESH_TOKEN_DURATION)
-                .domain(cookieDomain)
                 .sameSite("None")
                 .build();
-        return cookie.toString() + "; Partitioned";
+        return cookie.toString();
     }
 
     public String getRefreshTokenFromCookies(HttpServletRequest request) {
@@ -45,11 +44,10 @@ public class CookieUtil {
         ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(true)
-                .path("/api/auth/refresh")
+                .path("/")
                 .maxAge(0)
-                .domain(cookieDomain)
                 .sameSite("None")
                 .build();
-        return cookie.toString() + "; Partitioned";
+        return cookie.toString();
     }
 }

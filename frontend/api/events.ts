@@ -12,7 +12,6 @@ interface EventData {
 
 const API_URL = "/api/proxy";
 
-// Implementation matches what's in lib/api.ts but simpler for our use case
 async function apiRequest(endpoint: string, method = "GET", body: any = null, requiresAuth = true) {
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -27,19 +26,36 @@ async function apiRequest(endpoint: string, method = "GET", body: any = null, re
 
     const url = `${API_URL}${endpoint}`;
 
+    console.log(`Making API request to: ${url}`);
+
     try {
         const response = await fetch(url, {
             method,
             headers,
             body: body ? JSON.stringify(body) : null,
             credentials: "include",
+            cache: "no-store"
         });
 
         if (response.status === 204) {
             return { success: true, data: null };
         }
 
-        const responseData = await response.json();
+        // Handle empty responses
+        const responseText = await response.text();
+        if (!responseText) {
+            console.log("Empty response from API");
+            return { success: true, data: null };
+        }
+
+        // Try to parse the response as JSON
+        let responseData;
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (error) {
+            console.error("Failed to parse API response:", responseText);
+            throw new Error(`API response is not valid JSON: ${responseText.substring(0, 100)}...`);
+        }
 
         if (!response.ok) {
             throw new Error(responseData.error || `API request failed with status ${response.status}`);
@@ -69,19 +85,36 @@ async function apiFormDataRequest(
 
     const url = `${API_URL}${endpoint}`;
 
+    console.log(`Making API FormData request to: ${url}`);
+
     try {
         const response = await fetch(url, {
             method,
             headers,
             body: formData,
             credentials: "include",
+            cache: "no-store"
         });
 
         if (response.status === 204) {
             return { success: true, data: null };
         }
 
-        const responseData = await response.json();
+        // Handle empty responses
+        const responseText = await response.text();
+        if (!responseText) {
+            console.log("Empty response from API");
+            return { success: true, data: null };
+        }
+
+        // Try to parse the response as JSON
+        let responseData;
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (error) {
+            console.error("Failed to parse API response:", responseText);
+            throw new Error(`API response is not valid JSON: ${responseText.substring(0, 100)}...`);
+        }
 
         if (!response.ok) {
             throw new Error(responseData.error || `API request failed with status ${response.status}`);

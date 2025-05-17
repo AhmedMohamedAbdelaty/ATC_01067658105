@@ -20,13 +20,28 @@ async function apiRequest(endpoint: string, method = "GET", body: any = null, re
             headers,
             body: body ? JSON.stringify(body) : null,
             credentials: "include",
+            cache: "no-store"
         });
 
         if (response.status === 204) {
             return { success: true, data: null };
         }
 
-        const responseData = await response.json();
+        // Handle empty responses
+        const responseText = await response.text();
+        if (!responseText) {
+            console.log("Empty response from API");
+            return { success: true, data: null };
+        }
+
+        // Try to parse the response as JSON
+        let responseData;
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (error) {
+            console.error("Failed to parse API response:", responseText);
+            throw new Error(`API response is not valid JSON: ${responseText.substring(0, 100)}...`);
+        }
 
         if (!response.ok) {
             throw new Error(responseData.error || `API request failed with status ${response.status}`);

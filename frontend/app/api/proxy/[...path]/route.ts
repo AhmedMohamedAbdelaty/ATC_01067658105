@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+// Ensure API_BASE_URL has a value - fall back to the Koyeb URL if the env var is missing
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://zesty-maire-ahmed-muhammed-e26b0e5b.koyeb.app/api";
+
+console.log("API Proxy configured with base URL:", API_BASE_URL);
 
 const getAuthHeader = (request: NextRequest): Record<string, string> => {
     const authHeader = request.headers.get("Authorization");
@@ -40,12 +43,15 @@ export async function GET(request: NextRequest, context: ProxyRouteContext | Pro
         const searchParams = request.nextUrl.searchParams.toString()
         const url = `${API_BASE_URL}/${path}${searchParams ? `?${searchParams}` : ""}`
 
+        console.log(`Proxy GET request to: ${url}`);
+
         const response = await fetch(url, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
                 ...getAuthHeader(request),
             },
+            credentials: "include"
         })
 
         if (!response.ok) {
@@ -54,8 +60,18 @@ export async function GET(request: NextRequest, context: ProxyRouteContext | Pro
             return NextResponse.json({ success: false, error: `API error: ${response.status} ${errorText || response.statusText}` }, { status: response.status });
         }
 
-        const data = await response.json()
-        return NextResponse.json(data)
+        // Handle empty responses
+        const responseText = await response.text();
+        if (!responseText) {
+            return NextResponse.json({ success: true, data: null });
+        }
+
+        try {
+            const data = JSON.parse(responseText);
+            return NextResponse.json(data);
+        } catch (e) {
+            return NextResponse.json({ success: true, data: responseText });
+        }
     } catch (error) {
         console.error("Proxy error (GET):", error instanceof Error ? error.message : String(error))
         const errorMessage = error instanceof Error ? error.message : "Failed to process GET request in proxy";
@@ -68,6 +84,8 @@ export async function POST(request: NextRequest, context: ProxyRouteContext | Pr
         const path = await getPathFromContext(context);
         const url = `${API_BASE_URL}/${path}`
 
+        console.log(`Proxy POST request to: ${url}`);
+
         const contentType = request.headers.get("content-type") || "";
         let response;
 
@@ -79,6 +97,7 @@ export async function POST(request: NextRequest, context: ProxyRouteContext | Pr
                 method: "POST",
                 headers,
                 body: formData,
+                credentials: "include"
             });
         } else if (contentType.includes("application/json")) {
             let body;
@@ -97,6 +116,7 @@ export async function POST(request: NextRequest, context: ProxyRouteContext | Pr
                     ...getAuthHeader(request),
                 },
                 body: JSON.stringify(body),
+                credentials: "include"
             });
         } else {
             // Handle text/plain or other content types
@@ -109,6 +129,7 @@ export async function POST(request: NextRequest, context: ProxyRouteContext | Pr
                     ...getAuthHeader(request),
                 },
                 body: textBody || undefined,
+                credentials: "include"
             });
         }
 
@@ -139,8 +160,18 @@ export async function POST(request: NextRequest, context: ProxyRouteContext | Pr
             return NextResponse.json({ success: true }, { status: 204 });
         }
 
-        const data = await response.json();
-        return NextResponse.json(data);
+        // Handle standard json response
+        const responseText = await response.text();
+        if (!responseText) {
+            return NextResponse.json({ success: true, data: null });
+        }
+
+        try {
+            const data = JSON.parse(responseText);
+            return NextResponse.json(data);
+        } catch (e) {
+            return NextResponse.json({ success: true, data: responseText });
+        }
     } catch (error) {
         console.error("Proxy error (POST):", error instanceof Error ? error.message : String(error))
         const errorMessage = error instanceof Error ? error.message : "Failed to process POST request in proxy";
@@ -152,6 +183,9 @@ export async function PUT(request: NextRequest, context: ProxyRouteContext | Pro
     try {
         const path = await getPathFromContext(context);
         const url = `${API_BASE_URL}/${path}`
+
+        console.log(`Proxy PUT request to: ${url}`);
+
         let body;
 
         const contentType = request.headers.get("content-type");
@@ -182,6 +216,7 @@ export async function PUT(request: NextRequest, context: ProxyRouteContext | Pro
                 ...getAuthHeader(request),
             },
             body: JSON.stringify(body),
+            credentials: "include"
         })
 
         if (!response.ok) {
@@ -200,8 +235,17 @@ export async function PUT(request: NextRequest, context: ProxyRouteContext | Pro
             return NextResponse.json({ success: true }, { status: response.status });
         }
 
-        const data = await response.json();
-        return NextResponse.json(data);
+        const responseText = await response.text();
+        if (!responseText) {
+            return NextResponse.json({ success: true, data: null });
+        }
+
+        try {
+            const data = JSON.parse(responseText);
+            return NextResponse.json(data);
+        } catch (e) {
+            return NextResponse.json({ success: true, data: responseText });
+        }
     } catch (error) {
         console.error("Proxy error (PUT):", error instanceof Error ? error.message : String(error))
         const errorMessage = error instanceof Error ? error.message : "Failed to process PUT request in proxy";
@@ -214,11 +258,14 @@ export async function DELETE(request: NextRequest, context: ProxyRouteContext | 
         const path = await getPathFromContext(context);
         const url = `${API_BASE_URL}/${path}`
 
+        console.log(`Proxy DELETE request to: ${url}`);
+
         const response = await fetch(url, {
             method: "DELETE",
             headers: {
                 ...getAuthHeader(request),
             },
+            credentials: "include"
         })
 
         if (!response.ok) {
@@ -249,9 +296,18 @@ export async function DELETE(request: NextRequest, context: ProxyRouteContext | 
             }
         }
 
-        const data = await response.json().catch(() => ({ success: true, message: "Operation successful, no content"}));
-        return NextResponse.json(data);
+        // For any other status code, try to parse response as JSON
+        const responseText = await response.text();
+        if (!responseText) {
+            return NextResponse.json({ success: true, message: "Operation successful, no content"}, { status: 200 });
+        }
 
+        try {
+            const data = JSON.parse(responseText);
+            return NextResponse.json(data);
+        } catch (e) {
+            return NextResponse.json({ success: true, message: responseText }, { status: 200 });
+        }
     } catch (error) {
         console.error("Proxy error (DELETE):", error instanceof Error ? error.message : String(error))
         const errorMessage = error instanceof Error ? error.message : "Failed to process DELETE request in proxy";

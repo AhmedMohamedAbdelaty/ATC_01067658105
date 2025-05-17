@@ -28,7 +28,8 @@ public final class SecurityConstants {
             "https://*.koyeb.app",
             "https://*.lite.vusercontent.net",
             "https://*.v0.dev",
-            "https://*.vercel.app");
+            "https://*.vercel.app",
+            "https://v0-ebs-git-new-ui-ahmedmohamedabdelatys-projects.vercel.app");
 
     public static final List<String> ALLOWED_METHODS = List.of(
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
