@@ -15,6 +15,7 @@ public final class SecurityConstants {
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/webjars/**",
+            "/actuator/health"
     };
 
     public static final String[] ADMIN_PATHS = {

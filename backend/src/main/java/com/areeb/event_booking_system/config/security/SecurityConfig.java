@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -38,14 +39,15 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers(SecurityConstants.PUBLIC_PATHS)
-                        .permitAll()
-                        .requestMatchers(SecurityConstants.ADMIN_PATHS)
-                        .hasRole("ADMIN")
-                        .requestMatchers("/**")
-                        .permitAll() // Allow all endpoints marked with permitAll()
-                        .anyRequest()
-                        .authenticated())
+                .authorizeHttpRequests(auth -> auth
+                        // Only API paths with /api prefix
+                        .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**", "/uploads/event-images/**").permitAll()
+                        // Public paths in SecurityConstants
+                        .requestMatchers(SecurityConstants.PUBLIC_PATHS).permitAll()
+                        // Admin paths
+                        .requestMatchers(SecurityConstants.ADMIN_PATHS).hasRole("ADMIN")
+                        // All other requests must be authenticated
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())
                         .xssProtection(Customizer.withDefaults())
@@ -55,7 +57,7 @@ public class SecurityConfig {
                                         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;" +
                                         "font-src 'self' https://cdn.jsdelivr.net data:;" +
                                         "img-src 'self' https: data:;" +
-                                        "connect-src 'self';" +
+                                        "connect-src 'self' https://*.koyeb.app https://*.vercel.app;" +
                                         "form-action 'self';" +
                                         "upgrade-insecure-requests;")))
                 .build();

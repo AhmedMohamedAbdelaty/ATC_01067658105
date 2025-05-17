@@ -28,10 +28,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Validated
-@RequestMapping("/api/auth")
-@Tag(name = "Authentication", description = "Auth API endpoints")
+@Tag(name = "Authentication", description = "APIs for user authentication")
 public class AuthController {
 
     private final AuthService authService;

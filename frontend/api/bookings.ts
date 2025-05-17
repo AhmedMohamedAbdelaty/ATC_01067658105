@@ -1,4 +1,4 @@
-const API_URL = "/api/proxy";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 async function apiRequest(endpoint: string, method = "GET", body: any = null, requiresAuth = true) {
     const headers: Record<string, string> = {
