@@ -23,7 +23,9 @@ public final class SecurityConstants {
     public static final List<String> ALLOWED_ORIGINS = List.of(
             "http://localhost:8080",
             "http://localhost:3000",
-            "http://127.0.0.1:3000");
+            "http://127.0.0.1:3000",
+            "https://zesty-maire-ahmed-muhammed-e26b0e5b.koyeb.app",
+            "https://*.koyeb.app");
 
     public static final List<String> ALLOWED_METHODS = List.of(
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");

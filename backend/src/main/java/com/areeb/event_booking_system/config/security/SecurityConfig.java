@@ -49,7 +49,16 @@ public class SecurityConfig {
                 .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class)
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())
                         .xssProtection(Customizer.withDefaults())
-                        .contentSecurityPolicy(csp -> csp.policyDirectives("script-src 'self'")))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'self';" +
+                                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;" +
+                                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;" +
+                                "font-src 'self' https://cdn.jsdelivr.net data:;" +
+                                "img-src 'self' https: data:;" +
+                                "connect-src 'self';" +
+                                "form-action 'self';" +
+                                "upgrade-insecure-requests;"
+                                )))
                 .build();
     }
 
