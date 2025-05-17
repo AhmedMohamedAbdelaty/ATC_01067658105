@@ -37,6 +37,19 @@ async function getPathFromContext(context: ProxyRouteContext | Promise<ProxyRout
     return pathValue.join("/");
 }
 
+// Add OPTIONS handler for CORS preflight requests
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
+
 export async function GET(request: NextRequest, context: ProxyRouteContext | Promise<ProxyRouteContext>) {
     try {
         const path = await getPathFromContext(context);
