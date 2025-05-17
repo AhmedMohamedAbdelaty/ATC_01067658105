@@ -54,13 +54,30 @@ async function loadEventDetails(eventId) {
             const formattedDate = eventDate.toLocaleDateString(undefined, dateOptions);
             const formattedTime = eventDate.toLocaleTimeString(undefined, timeOptions);
 
+            const defaultImageUrl = 'assets/images/event-placeholder.jpg';
+            const apiBaseUrl = getApiBaseUrl().replace('/api', '');
+
+            let imageUrl;
+            if (event.imageUrl) {
+                if (event.imageUrl.startsWith('http')) {
+                    imageUrl = event.imageUrl;
+                }
+                else {
+                    imageUrl = apiBaseUrl + event.imageUrl;
+                }
+            } else {
+                imageUrl = defaultImageUrl;
+            }
+
             document.title = `${event.name} - Event Booking System`;
 
             eventDetailsContainer.innerHTML = `
                 <div class="row">
                     <div class="col-md-6 mb-4">
-                        <img src="${event.imageUrl || 'https://via.placeholder.com/600x400?text=Event+Image'}"
-                            class="img-fluid rounded event-image" alt="${event.name}">
+                        <img src="${imageUrl}" class="img-fluid rounded event-image"
+                            alt="${event.name}"
+                            onerror="this.onerror=null; this.src='${defaultImageUrl}';"
+                            style="width: 100%; height: 350px; object-fit: cover;">
                     </div>
                     <div class="col-md-6">
                         <h1 class="mb-3">${event.name}</h1>

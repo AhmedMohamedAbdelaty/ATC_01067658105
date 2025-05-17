@@ -1,11 +1,13 @@
 package com.areeb.event_booking_system.controllers;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,7 +18,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.areeb.event_booking_system.dtos.ResponseDto;
 import com.areeb.event_booking_system.dtos.event.EventDto;
@@ -33,11 +37,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/events")
 @RequiredArgsConstructor
 @Tag(name = "Event Management", description = "APIs for managing events")
+@Slf4j
 public class EventController {
 
     private final EventService eventService;
@@ -107,5 +113,33 @@ public class EventController {
         eventService.deleteEvent(eventId, currentUser);
         return ResponseEntity.status(HttpStatus.NO_CONTENT)
                 .body(ResponseDto.success("Event deleted successfully."));
+    }
+
+    @PostMapping(value = "/{eventId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('EVENT_MANAGE_ALL')")
+    @Operation(summary = "Upload event image", description = "Allows admins to upload or replace an event image.")
+    public ResponseEntity<ResponseDto<EventDto.EventResponse>> uploadEventImage(
+            @PathVariable UUID eventId,
+            @RequestParam MultipartFile imageFile,
+            @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws IOException {
+
+        log.debug("Received image upload request for event: {}", eventId);
+        if (imageFile.isEmpty()) {
+            throw new IllegalArgumentException("Image file cannot be empty");
+        }
+        EventDto.EventResponse updatedEvent = eventService.updateEventImage(eventId, imageFile, currentUser);
+        return ResponseEntity.ok(ResponseDto.success(updatedEvent));
+    }
+
+    @DeleteMapping("/{eventId}/image")
+    @PreAuthorize("hasAuthority('EVENT_MANAGE_ALL')")
+    @Operation(summary = "Delete event image", description = "Allows admins to remove an event image.")
+    public ResponseEntity<ResponseDto<EventDto.EventResponse>> deleteEventImage(
+            @PathVariable UUID eventId,
+            @Parameter(hidden = true) @AuthenticationPrincipal User currentUser) throws IOException {
+
+        log.debug("Received image delete request for event: {}", eventId);
+        EventDto.EventResponse updatedEvent = eventService.updateEventImage(eventId, null, currentUser);
+        return ResponseEntity.ok(ResponseDto.success(updatedEvent));
     }
 }

@@ -114,8 +114,26 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="image-url" class="form-label">Image URL</label>
-                        <input type="url" class="form-control" id="image-url" placeholder="https://example.com/image.jpg">
+                        <label for="event-image" class="form-label">Event Image</label>
+                        <input type="file" class="form-control" id="event-image" accept="image/*">
+                        <small class="form-text text-muted">Recommended size: 800x600 pixels. Max size: 10MB.</small>
+
+                        <div class="mt-2">
+                            <!-- New image -->
+                            <div id="image-preview-container" style="display: none;">
+                                <p>Selected Image Preview:</p>
+                                <img id="image-preview" src="#" alt="Preview" class="img-thumbnail" style="max-width: 300px; max-height: 200px;">
+                            </div>
+
+                            <!-- Current image -->
+                            <div id="current-image-container" style="display: none;">
+                                <p>Current Image:</p>
+                                <img id="current-image" src="#" alt="Current Event Image" class="img-thumbnail" style="max-width: 300px; max-height: 200px;">
+                                <div class="mt-2">
+                                    <button type="button" id="remove-image-btn" class="btn btn-sm btn-danger">Remove Image</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mb-3">

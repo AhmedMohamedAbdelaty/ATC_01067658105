@@ -1,9 +1,11 @@
 package com.areeb.event_booking_system.services.event;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.areeb.event_booking_system.dtos.event.EventDto;
 import com.areeb.event_booking_system.models.event.EventCategory;
@@ -21,4 +23,6 @@ public interface EventService {
     Page<EventDto.EventResponse> getAllEvents(Pageable pageable);
 
     Page<EventDto.EventResponse> getEventsByCategory(EventCategory category, Pageable pageable);
+
+    EventDto.EventResponse updateEventImage(UUID eventId, MultipartFile imageFile, User currentUser) throws IOException;
 }

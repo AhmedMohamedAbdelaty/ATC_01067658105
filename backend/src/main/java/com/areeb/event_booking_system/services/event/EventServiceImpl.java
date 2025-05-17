@@ -1,5 +1,6 @@
 package com.areeb.event_booking_system.services.event;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.areeb.event_booking_system.dtos.event.EventDto;
 import com.areeb.event_booking_system.dtos.event.EventDto.EventResponse;
@@ -23,6 +25,7 @@ import com.areeb.event_booking_system.models.user.User;
 import com.areeb.event_booking_system.repository.UserRepository;
 import com.areeb.event_booking_system.repository.booking.BookingRepository;
 import com.areeb.event_booking_system.repository.event.EventRepository;
+import com.areeb.event_booking_system.services.FileUploadService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +39,7 @@ public class EventServiceImpl implements EventService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final EventMapper eventMapper;
+    private final FileUploadService fileUploadService;
 
     @Override
     @Transactional
@@ -65,9 +69,17 @@ public class EventServiceImpl implements EventService {
     @Transactional
     public void deleteEvent(UUID eventId, User currentUser) {
         log.info("Deleting event id: {} by user: {}", eventId, currentUser.getUsername());
-        if (!eventRepository.existsById(eventId)) {
-            throw new ResourceNotFoundException("Event", "id", eventId);
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
+
+        if (event.getImageUrl() != null && !event.getImageUrl().isBlank()) {
+            try {
+                fileUploadService.deleteFile(event.getImageUrl());
+            } catch (IOException e) {
+                log.error("Error deleting image for event {}: {}", eventId, e.getMessage());
+            }
         }
+
         bookingRepository.deleteByEventId(eventId);
         eventRepository.deleteById(eventId);
         log.info("Event deleted successfully: {}", eventId);
@@ -105,6 +117,40 @@ public class EventServiceImpl implements EventService {
                 .map(event -> mapEventToResponse(event))
                 .collect(Collectors.toList());
         return new PageImpl<>(eventResponses, pageable, eventsPage.getTotalElements());
+    }
+
+    @Override
+    @Transactional
+    public EventDto.EventResponse updateEventImage(UUID eventId, MultipartFile imageFile, User currentUser)
+            throws IOException {
+        log.info("Updating image for event id: {} by user: {}", eventId, currentUser.getUsername());
+
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourceNotFoundException("Event", "id", eventId));
+
+        String oldImageUrl = event.getImageUrl();
+        if (oldImageUrl != null && !oldImageUrl.isBlank()) {
+            try {
+                fileUploadService.deleteFile(oldImageUrl);
+                log.debug("Deleted old image: {}", oldImageUrl);
+            } catch (IOException e) {
+                log.error("Failed to delete old image: {} for event ID: {}", oldImageUrl, eventId, e);
+            }
+        }
+
+        if (imageFile != null && !imageFile.isEmpty()) {
+            String newImageUrl = fileUploadService.storeFile(imageFile, eventId);
+            event.setImageUrl(newImageUrl);
+            log.debug("Stored new image at: {}", newImageUrl);
+        } else {
+            event.setImageUrl(null);
+            log.debug("Removed image for event: {}", eventId);
+        }
+
+        Event updatedEvent = eventRepository.save(event);
+        log.info("Event image updated successfully for event: {}", updatedEvent.getId());
+
+        return mapEventToResponse(updatedEvent);
     }
 
     private boolean isCurrentUserBooked(UUID eventId) {

@@ -65,6 +65,58 @@ async function apiRequest(endpoint, method = 'GET', body = null, requiresAuth = 
     }
 }
 
+async function apiFormDataRequest(endpoint, method = 'POST', formData = null, requiresAuth = true) {
+    const headers = {};
+
+    if (requiresAuth) {
+        await ensureValidAccessToken();
+        const token = localStorage.getItem('token');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        } else {
+            window.location.href = 'login.html';
+            throw new Error('Authentication required, but no token available.');
+        }
+    }
+
+    try {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method,
+            headers,
+            body: formData,
+            credentials: 'include'
+        });
+
+        if (response.status === 204) {
+            return { success: true, data: null };
+        }
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+            if (response.status === 401 && !endpoint.includes('/auth/refresh')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                if (!window.location.pathname.endsWith('login.html')) {
+                    window.location.href = 'login.html';
+                }
+                throw new Error(responseData.error || 'Unauthorized access - please log in again.');
+            }
+            throw new Error(responseData.error || `API request failed with status ${response.status}`);
+        }
+
+        return responseData;
+
+    } catch (error) {
+        console.error('API FormData Request Error:', error);
+        if (error instanceof Error) {
+            throw error;
+        } else {
+            throw new Error(error.toString());
+        }
+    }
+}
+
 const AuthAPI = {
     login: async (emailOrUsername, password) => {
         const response = await apiRequest('/auth/login', 'POST', { emailOrUsername, password }, false);
@@ -121,6 +173,17 @@ const EventsAPI = {
 
     deleteEvent: async (eventId) => {
         return apiRequest(`/events/${eventId}`, 'DELETE', null, true);
+    },
+
+    uploadEventImage: async (eventId, imageFile) => {
+        const formData = new FormData();
+        formData.append('imageFile', imageFile);
+
+        return apiFormDataRequest(`/events/${eventId}/image`, 'POST', formData, true);
+    },
+
+    deleteEventImage: async (eventId) => {
+        return apiRequest(`/events/${eventId}/image`, 'DELETE', null, true);
     }
 };
 
