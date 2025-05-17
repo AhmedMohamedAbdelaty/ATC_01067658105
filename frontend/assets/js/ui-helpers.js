@@ -31,6 +31,18 @@ function showNotification(message, type = 'info', duration = 5000) {
     }
 }
 
+function displayFormError(message, errorElementId = 'error-message') {
+    const errorElement = document.getElementById(errorElementId);
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        console.warn(`Error element with ID '${errorElementId}' not found. Cannot display form error.`);
+        showNotification(message, 'danger');
+    }
+}
+
 function renderLoadingSpinner(containerElement, message = 'Loading...') {
     if (!containerElement) return;
     containerElement.innerHTML = `
@@ -63,7 +75,15 @@ function renderErrorState(containerElement, title = 'Oops! Something Went Wrong'
     `;
 }
 
-function renderEmptyState(containerElement, title = 'Nothing to See Here', message = 'There is no data to display at the moment.', ctaLink = null, ctaText = 'Do Something', ctaIconClass = null, imageSrc = 'assets/images/icons/empty-box.svg') {
+function renderEmptyState(
+    containerElement,
+    title = 'Nothing to See Here',
+    message = 'There is no data to display at the moment.',
+    ctaLink = null,
+    ctaText = 'Do Something',
+    ctaIconClass = null,
+    imageSrc = 'assets/images/icons/empty-box.svg'
+) {
     if (!containerElement) return;
     let ctaButtonHTML = '';
     if (ctaLink) {
@@ -84,7 +104,7 @@ function renderEmptyState(containerElement, title = 'Nothing to See Here', messa
 
 function ensureAnimationStyles() {
     if (!document.getElementById('common-animation-styles')) {
-        const styleSheet = document.createElement("style");
+        const styleSheet = document.createElement('style');
         styleSheet.id = 'common-animation-styles';
         styleSheet.innerText = `
             /* General Item Animations */
