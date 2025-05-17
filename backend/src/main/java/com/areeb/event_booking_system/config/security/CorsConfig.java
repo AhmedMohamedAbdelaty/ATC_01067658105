@@ -17,10 +17,22 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
+
+        // Add specific origins instead of wildcard pattern for better security
+        config.addAllowedOrigin("https://v0-ebs-git-new-ui-ahmedmohamedabdelatys-projects.vercel.app");
+        config.addAllowedOrigin("https://v0-ebs-one.vercel.app");
+        config.addAllowedOrigin("https://v0-ebs.vercel.app");
+        config.addAllowedOrigin("http://localhost:3000");
+
+        // You can add a wildcard pattern as a fallback, but it's better to be specific
         config.addAllowedOriginPattern("*");
+
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
-        config.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
+        config.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie", "Content-Disposition"));
+
+        // Increase max age for OPTIONS preflight cache
+        config.setMaxAge(3600L);
 
         source.registerCorsConfiguration("/**", config);
         return new CorsFilter(source);
