@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { EventsAPI, handleApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
+import BookingsAPI from '@/api/bookings';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarDays, Clock, MapPin, Search, Users, SlidersHorizontal, X } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Search, Users, SlidersHorizontal, X, CheckCircle, Edit } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -150,6 +152,7 @@ export default function EventsPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { toast } = useToast();
+    const { user, isAdmin } = useAuth();
     const categoryUrlParam = searchParams.get('category');
     const searchUrlParam = searchParams.get('search');
 
@@ -170,7 +173,7 @@ export default function EventsPage() {
     const [useMockData, setUseMockData] = useState(false);
 
     const pageSize = 9;
-    const previousCategoryLoadedRef = useRef<string | null | undefined>();
+    const previousCategoryLoadedRef = useRef<string | null | undefined>(null);
     const [isInitialLoadTriggered, setIsInitialLoadTriggered] = useState(false);
 
     // When component mounts, mark loading as false to trigger initial events load
@@ -214,6 +217,17 @@ export default function EventsPage() {
         applyFiltersToEvents();
     }, [events, searchTerm, activeCategory, priceRange, dateFilter, selectedVenues]);
 
+    useEffect(() => {
+        // Check if user is authenticated
+        console.log("Current user auth status:", user);
+
+        // If user changes, reload events to get correct booking status
+        if (user && isInitialLoadTriggered) {
+            const categoryForApi = activeCategory === 'ALL' ? null : activeCategory;
+            loadEvents(0, categoryForApi);
+        }
+    }, [user]);
+
     const loadEvents = async (pageToLoad: number, categoryToLoad: string | null) => {
         console.log(`loadEvents called - Category: ${categoryToLoad}, Page: ${pageToLoad}. Current loading state: ${loading}`);
 
@@ -227,7 +241,52 @@ export default function EventsPage() {
 
             if (response && response.success && response.data && Array.isArray(response.data.content)) {
                 console.log(`Successfully loaded ${response.data.content.length} events`);
-                setEvents(response.data.content);
+
+                // Get user's actual bookings if logged in
+                let eventsWithBookingStatus = response.data.content;
+
+                if (user) {
+                    try {
+                        // Get user's bookings
+                        const bookingsResponse = await BookingsAPI.getUserBookings(0, 100);
+
+                        if (bookingsResponse.success && bookingsResponse.data && Array.isArray(bookingsResponse.data.content)) {
+                            const userBookings = bookingsResponse.data.content;
+
+                                                        // Extract event IDs from user's bookings
+                            console.log("User's bookings:", userBookings);
+
+                            const bookedEventIds = userBookings.map((booking: any) => {
+                                if (!booking.eventDetails) {
+                                    console.error("Booking missing eventDetails:", booking);
+                                    return null;
+                                }
+                                return booking.eventDetails.id;
+                            }).filter(Boolean);
+
+                            console.log("User's booked event IDs:", bookedEventIds);
+
+                            // Mark events as booked if they're in the user's bookings
+                            eventsWithBookingStatus = response.data.content.map((event: any) => {
+                                const isBooked = bookedEventIds.includes(event.id);
+                                if (isBooked) {
+                                    console.log(`Marking event ${event.id} - ${event.name} as booked`);
+                                }
+                                return {
+                                    ...event,
+                                    isCurrentUserBooked: isBooked
+                                };
+                            });
+
+                            const bookedEvents = eventsWithBookingStatus.filter((event: any) => event.isCurrentUserBooked);
+                            console.log(`Events with actual isCurrentUserBooked=true: ${bookedEvents.length}`, bookedEvents);
+                        }
+                    } catch (err) {
+                        console.error("Error fetching user bookings:", err);
+                    }
+                }
+
+                setEvents(eventsWithBookingStatus);
                 setUseMockData(false);
             } else {
                 console.error('Invalid response format from API:', response);
@@ -536,6 +595,10 @@ export default function EventsPage() {
                     const isSoldOut = event.maxCapacity !== null && event.currentBookingsCount >= event.maxCapacity;
                     const canBookOrViewDetails = !isSoldOut || event.isCurrentUserBooked;
 
+                    // DEBUG: Log detailed info about each event in the UI
+                    console.log(`Event ${event.id} - ${event.name} - isCurrentUserBooked: ${event.isCurrentUserBooked},
+                                isSoldOut: ${isSoldOut}, Button text: ${event.isCurrentUserBooked ? 'View Booking' : (isSoldOut ? 'Sold Out' : 'View Details')}`);
+
                     return (
                         <motion.div key={event.id} variants={cardVariant} className="col-span-1">
                             <Card className={`event-card h-full flex flex-col overflow-hidden ${isSoldOut && !event.isCurrentUserBooked ? 'opacity-70' : ''}`}>
@@ -549,13 +612,26 @@ export default function EventsPage() {
                                         }}
                                     />
                                     {event.isCurrentUserBooked && (
-                                        <Badge className="absolute top-2 right-2 z-10 bg-green-600 text-white hover:bg-green-700">Booked</Badge>
+                                        <Badge className="absolute top-2 right-2 z-10 bg-green-600 text-white hover:bg-green-700">
+                                            <CheckCircle className="mr-1 h-3 w-3" />
+                                            Booked
+                                        </Badge>
                                     )}
                                     {isSoldOut && !event.isCurrentUserBooked && (
                                         <Badge variant="destructive" className="absolute top-2 left-2 z-10">Sold Out</Badge>
                                     )}
-                                     {isSoldOut && event.isCurrentUserBooked && (
+                                    {isSoldOut && event.isCurrentUserBooked && (
                                         <Badge variant="outline" className="absolute top-2 left-2 z-10 bg-background/80">Sold Out (Booked by you)</Badge>
+                                    )}
+                                    {isAdmin && (
+                                        <div className="absolute bottom-2 right-2 z-10">
+                                            <Button variant="secondary" size="sm" asChild className="h-8 text-xs font-medium shadow-sm">
+                                                <Link href={`/admin/events/${event.id}/edit`}>
+                                                    <Edit className="h-3 w-3 mr-1" />
+                                                    Edit
+                                                </Link>
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                                 <CardHeader className="p-4 pb-0">

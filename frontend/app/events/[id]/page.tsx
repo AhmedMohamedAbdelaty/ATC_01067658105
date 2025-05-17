@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { EventsAPI, BookingsAPI, handleApiError } from '@/lib/api';
+import EventsAPI from '@/api/events';
+import BookingsAPI from '@/api/bookings';
+import { handleApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -23,7 +25,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CalendarDays, Clock, MapPin, DollarSign, Users, Loader2, ArrowLeft, Calendar, CheckCircle, Share2, Heart, MessageCircle, Info, Star, User } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, DollarSign, Users, Loader2, ArrowLeft, Calendar, CheckCircle, Share2, Heart, MessageCircle, Info, Star, User, Edit } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 // Animation variants
 const fadeIn = {
@@ -113,7 +116,7 @@ export default function EventDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, isAdmin } = useAuth();
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -146,6 +149,13 @@ export default function EventDetailsPage() {
 
     const handleBookEvent = async () => {
         if (!user) {
+            // Save current URL to redirect back after login
+            sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
+            toast({
+                title: "Authentication Required",
+                description: "Please log in to book this event",
+                variant: "default"
+            });
             router.push('/login');
             return;
         }
@@ -153,6 +163,12 @@ export default function EventDetailsPage() {
         setBookingInProgress(true);
 
         try {
+            toast({
+                title: "Processing Booking",
+                description: "Please wait while we process your booking...",
+                variant: "default"
+            });
+
             const response = await BookingsAPI.createBooking(params.id as string);
 
             if (response.success) {
@@ -161,6 +177,9 @@ export default function EventDetailsPage() {
                     description: 'You have successfully booked this event.',
                     variant: 'default',
                 });
+
+                // Refresh event details to show updated booking status
+                await loadEventDetails();
 
                 // Redirect to congratulations page
                 const eventName = encodeURIComponent(event?.name || '');
@@ -173,7 +192,12 @@ export default function EventDetailsPage() {
                 throw new Error(response.error || 'Booking failed');
             }
         } catch (err) {
-            handleApiError(err);
+            const errorMessage = handleApiError(err);
+            toast({
+                title: 'Booking Failed',
+                description: errorMessage,
+                variant: 'destructive',
+            });
         } finally {
             setBookingInProgress(false);
         }
@@ -304,6 +328,20 @@ export default function EventDetailsPage() {
                     {event.category}
                 </Badge>
                 <div className="ml-auto flex gap-2">
+                    {event.isCurrentUserBooked && (
+                        <Badge className="mr-2 bg-green-600 text-white">
+                            <CheckCircle className="mr-1 h-3 w-3" />
+                            Booked
+                        </Badge>
+                    )}
+                    {isAdmin && (
+                        <Button variant="outline" size="sm" asChild className="mr-2">
+                            <Link href={`/admin/events/${event.id}/edit`}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Event
+                            </Link>
+                        </Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => setIsLiked(!isLiked)} className={isLiked ? 'text-red-500' : ''}>
                         <Heart className={`h-4 w-4 mr-2 ${isLiked ? 'fill-current' : ''}`} />
                         Save
@@ -315,295 +353,278 @@ export default function EventDetailsPage() {
                 </div>
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <motion.div initial="hidden" animate="visible" variants={slideUp} className="lg:col-span-2">
-                    <div className="rounded-lg overflow-hidden border">
-                        <img
-                            src={getEventImageUrl(event.imageUrl) || '/placeholder.svg'}
-                            alt={event.name}
-                            className="w-full aspect-video object-cover"
-                            onError={e => {
-                                (e.target as HTMLImageElement).src = '/images/event-placeholder.png';
-                            }}
-                        />
-                    </div>
-
-                    <Tabs defaultValue="about" className="mt-8">
-                        <TabsList className="grid w-full grid-cols-3">
-                            <TabsTrigger value="about">About</TabsTrigger>
-                            <TabsTrigger value="reviews">Reviews</TabsTrigger>
-                            <TabsTrigger value="location">Location</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="about" className="mt-4">
-                            <h2 className="text-xl font-semibold mb-4">About This Event</h2>
-                            <div className="prose max-w-none dark:prose-invert">
-                                {event.description.split('\n').map((paragraph, index) => (
-                                    <p key={index}>{paragraph}</p>
-                                ))}
-                            </div>
-
-                            <div className="mt-8">
-                                <h3 className="text-lg font-semibold mb-3">Organizer</h3>
-                                <div className="flex items-center">
-                                    <Avatar className="h-10 w-10 mr-3">
-                                        <AvatarFallback>{event.adminCreatorUsername.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <p className="font-medium">{event.adminCreatorUsername}</p>
-                                        <p className="text-sm text-muted-foreground">Event Organizer</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </TabsContent>
-                        <TabsContent value="reviews" className="mt-4">
-                            <div className="flex items-center mb-6">
-                                <div className="mr-4">
-                                    <div className="text-3xl font-bold">{getAverageRating()}</div>
-                                    <div className="flex">
-                                        {[1, 2, 3, 4, 5].map(star => (
-                                            <Star
-                                                key={star}
-                                                className={`h-4 w-4 ${
-                                                    star <= Math.round(Number.parseFloat(getAverageRating())) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground">{sampleReviews.length} reviews</div>
-                                </div>
-                                <div className="flex-1">
-                                    {[5, 4, 3, 2, 1].map(rating => {
-                                        const count = sampleReviews.filter(r => r.rating === rating).length;
-                                        const percentage = (count / sampleReviews.length) * 100;
-                                        return (
-                                            <div key={rating} className="flex items-center text-sm mb-1">
-                                                <span className="w-3">{rating}</span>
-                                                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 ml-1 mr-2" />
-                                                <div className="w-full bg-muted rounded-full h-2">
-                                                    <div className="bg-yellow-500 rounded-full h-2" style={{ width: `${percentage}%` }}></div>
-                                                </div>
-                                                <span className="ml-2 text-muted-foreground">{count}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                {sampleReviews.map(review => (
-                                    <div key={review.id} className="border-b pb-6 last:border-0">
-                                        <div className="flex items-center mb-2">
-                                            <Avatar className="h-8 w-8 mr-2">
-                                                <AvatarImage src={review.avatar || '/placeholder.svg'} alt={review.name} />
-                                                <AvatarFallback>{review.name.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-medium">{review.name}</p>
-                                                <div className="flex items-center">
-                                                    <div className="flex">
-                                                        {[1, 2, 3, 4, 5].map(star => (
-                                                            <Star key={star} className={`h-3 w-3 ${star <= review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
-                                                        ))}
-                                                    </div>
-                                                    <span className="text-xs text-muted-foreground ml-2">{new Date(review.date).toLocaleDateString()}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <p className="text-sm">{review.comment}</p>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <Button variant="outline" className="mt-4 w-full">
-                                <MessageCircle className="mr-2 h-4 w-4" />
-                                Write a Review
-                            </Button>
-                        </TabsContent>
-                        <TabsContent value="location" className="mt-4">
-                            <h2 className="text-xl font-semibold mb-4">Event Location</h2>
-                            <div className="rounded-lg overflow-hidden border mb-4">
-                                <img src="/placeholder.svg?height=300&width=600" alt="Map location" className="w-full h-[300px] object-cover" />
-                            </div>
-                            <div className="p-4 border rounded-lg">
-                                <h3 className="font-semibold mb-2">{event.venue}</h3>
-                                <p className="text-sm text-muted-foreground mb-4">123 Event Street, City, Country</p>
-                                <div className="flex flex-col space-y-2 text-sm">
-                                    <div className="flex items-start">
-                                        <Info className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                                        <div>
-                                            <p className="font-medium">Getting There</p>
-                                            <p className="text-muted-foreground">Public transportation: Take the Blue Line to Central Station, then walk 5 minutes east.</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start">
-                                        <Info className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
-                                        <div>
-                                            <p className="font-medium">Parking</p>
-                                            <p className="text-muted-foreground">Paid parking available at the venue. $10 for the duration of the event.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-
-                    <div className="mt-8">
-                        <h2 className="text-xl font-semibold mb-4">Similar Events</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {similarEvents.map(simEvent => (
-                                <Link href={`/events/${simEvent.id}`} key={simEvent.id}>
-                                    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                                        <img src={simEvent.image || '/placeholder.svg'} alt={simEvent.name} className="w-full h-32 object-cover" />
-                                        <div className="p-3">
-                                            <h3 className="font-medium text-sm line-clamp-1">{simEvent.name}</h3>
-                                            <div className="flex items-center text-xs text-muted-foreground mt-1">
-                                                <CalendarDays className="h-3 w-3 mr-1" />
-                                                <span>
-                                                    {new Date(simEvent.date).toLocaleDateString(undefined, {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                    })}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
+            {/* Event Content */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                {/* Event Image */}
+                <motion.div initial="hidden" animate="visible" variants={fadeIn} className="rounded-lg overflow-hidden">
+                    <img
+                        src={getEventImageUrl(event.imageUrl)}
+                        alt={event.name}
+                        className="w-full object-cover aspect-video rounded-lg"
+                        onError={e => {
+                            (e.target as HTMLImageElement).src = '/images/event-placeholder.png';
+                        }}
+                    />
                 </motion.div>
 
+                {/* Event Details */}
                 <motion.div initial="hidden" animate="visible" variants={slideUp} className="space-y-6">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight mb-2">{event.name}</h1>
-                        <div className="flex items-center">
-                            <User className="h-4 w-4 mr-1 text-muted-foreground" />
-                            <p className="text-muted-foreground">Organized by {event.adminCreatorUsername}</p>
+                        <div className="flex items-center space-x-2 mb-4">
+                            <Badge variant="outline" className="category-badge">
+                                {event.category}
+                            </Badge>
+                            {event.isCurrentUserBooked && (
+                                <Badge className="bg-green-600 text-white">
+                                    <CheckCircle className="mr-1 h-3 w-3" />
+                                    Booked
+                                </Badge>
+                            )}
+                            {isPastEvent && <Badge variant="secondary">Past Event</Badge>}
+                            {eventSoldOut && !event.isCurrentUserBooked && <Badge variant="destructive">Sold Out</Badge>}
                         </div>
+                        <p className="text-muted-foreground">{event.description}</p>
                     </div>
 
-                    <div className="p-6 border rounded-lg space-y-4 bg-muted/30">
+                    <div className="space-y-3 border-t pt-4">
                         <div className="flex items-center">
-                            <CalendarDays className="h-5 w-5 mr-3 text-primary" />
+                            <CalendarDays className="h-5 w-5 mr-3 text-muted-foreground" />
                             <div>
-                                <p className="font-medium">{formatDate(event.eventDate)}</p>
+                                <span className="font-medium">Date</span>
+                                <p>{formatDate(event.eventDate)}</p>
                             </div>
                         </div>
                         <div className="flex items-center">
-                            <Clock className="h-5 w-5 mr-3 text-primary" />
+                            <Clock className="h-5 w-5 mr-3 text-muted-foreground" />
                             <div>
-                                <p className="font-medium">{formatTime(event.eventDate)}</p>
+                                <span className="font-medium">Time</span>
+                                <p>{formatTime(event.eventDate)}</p>
                             </div>
                         </div>
                         <div className="flex items-center">
-                            <MapPin className="h-5 w-5 mr-3 text-primary" />
+                            <MapPin className="h-5 w-5 mr-3 text-muted-foreground" />
                             <div>
-                                <p className="font-medium">{event.venue}</p>
+                                <span className="font-medium">Venue</span>
+                                <p>{event.venue}</p>
                             </div>
                         </div>
                         <div className="flex items-center">
-                            <DollarSign className="h-5 w-5 mr-3 text-primary" />
+                            <DollarSign className="h-5 w-5 mr-3 text-muted-foreground" />
                             <div>
-                                <p className="font-medium">${event.price.toFixed(2)}</p>
+                                <span className="font-medium">Price</span>
+                                <p>${event.price.toFixed(2)}</p>
                             </div>
                         </div>
-                        {event.maxCapacity && (
+                        {event.maxCapacity !== null && (
                             <div className="flex items-center">
-                                <Users className="h-5 w-5 mr-3 text-primary" />
+                                <Users className="h-5 w-5 mr-3 text-muted-foreground" />
                                 <div>
-                                    <p className="font-medium">
-                                        {event.currentBookingsCount} / {event.maxCapacity} spots filled
+                                    <span className="font-medium">Capacity</span>
+                                    <p>
+                                        {event.currentBookingsCount} / {event.maxCapacity} spots
+                                        {eventSoldOut && <span className="text-destructive font-medium"> (Sold Out)</span>}
                                     </p>
-                                    <div className="w-full bg-muted rounded-full h-2 mt-1">
-                                        <div
-                                            className="bg-primary rounded-full h-2"
-                                            style={{
-                                                width: `${Math.min(100, (event.currentBookingsCount / event.maxCapacity) * 100)}%`,
-                                            }}
-                                        ></div>
-                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {event.isCurrentUserBooked ? (
-                        <div className="p-4 border rounded-lg bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900 flex items-center">
-                            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
-                            <div>
-                                <p className="font-medium text-green-800 dark:text-green-300">You have booked this event</p>
-                                <p className="text-sm text-green-600 dark:text-green-400">Check your bookings for more details</p>
-                            </div>
-                        </div>
-                    ) : isPastEvent ? (
-                        <div className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900">
-                            <p className="font-medium text-amber-800 dark:text-amber-300">This event has already taken place</p>
-                        </div>
-                    ) : eventSoldOut ? (
-                        <div className="p-4 border rounded-lg bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900">
-                            <p className="font-medium text-red-800 dark:text-red-300">This event is sold out</p>
-                        </div>
-                    ) : (
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button className="w-full" size="lg">
-                                    <Calendar className="mr-2 h-5 w-5" />
-                                    Book Now
+                    <div className="pt-4">
+                        {event.isCurrentUserBooked ? (
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-center p-4 bg-green-50 text-green-700 rounded-lg">
+                                    <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                                    <span>You've booked this event. Check your <Link href="/my-bookings" className="underline font-medium">My Bookings</Link> page for details.</span>
+                                </div>
+                                <Button asChild variant="outline">
+                                    <Link href="/my-bookings">View My Bookings</Link>
                                 </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirm Booking</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Are you sure you want to book this event? You will receive a confirmation once your booking is complete.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleBookEvent} disabled={bookingInProgress}>
-                                        {bookingInProgress ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Processing...
-                                            </>
-                                        ) : (
-                                            'Confirm Booking'
-                                        )}
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
-
-                    <div className="flex justify-center">
-                        <Button variant="outline" asChild>
-                            <Link href="/my-bookings">View My Bookings</Link>
-                        </Button>
+                            </div>
+                        ) : isPastEvent ? (
+                            <Button disabled className="w-full">Event has ended</Button>
+                        ) : eventSoldOut ? (
+                            <Button disabled className="w-full">Sold Out</Button>
+                        ) : (
+                            <Button
+                                onClick={handleBookEvent}
+                                disabled={bookingInProgress}
+                                className="w-full"
+                            >
+                                {bookingInProgress ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>Book Now - ${event.price.toFixed(2)}</>
+                                )}
+                            </Button>
+                        )}
                     </div>
 
-                    <div className="p-4 border rounded-lg">
-                        <h3 className="font-medium mb-3">Event Details</h3>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Category</span>
-                                <span>{event.category}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Created</span>
-                                <span>{new Date(event.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Last Updated</span>
-                                <span>{new Date(event.updatedAt).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Event ID</span>
-                                <span className="font-mono text-xs">{event.id.substring(0, 8)}</span>
-                            </div>
-                        </div>
+                    <div className="text-sm text-muted-foreground pt-2">
+                        <p>Created by {event.adminCreatorUsername} on {new Date(event.createdAt).toLocaleDateString()}</p>
                     </div>
                 </motion.div>
             </div>
+
+            {/* Tabs Section */}
+            <motion.div initial="hidden" animate="visible" variants={fadeIn} className="mb-12">
+                <Tabs defaultValue="details" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="details">Details</TabsTrigger>
+                        <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                        <TabsTrigger value="similar">Similar Events</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="details" className="pt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="col-span-2">
+                                <h3 className="text-xl font-semibold mb-4">About This Event</h3>
+                                <div className="prose max-w-none">
+                                    <p>{event.description}</p>
+                                    <p>
+                                        Join us for this amazing event at {event.venue}. Whether you're a beginner or expert, this event offers
+                                        something for everyone.
+                                    </p>
+                                    <h4>What You'll Experience</h4>
+                                    <ul>
+                                        <li>Engaging presentations from industry experts</li>
+                                        <li>Hands-on workshops and interactive sessions</li>
+                                        <li>Networking opportunities with like-minded professionals</li>
+                                        <li>Exclusive content and resources to take home</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div className="col-span-1 space-y-6">
+                                <div className="bg-muted rounded-lg p-6">
+                                    <h3 className="text-lg font-semibold mb-4">Event Information</h3>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center">
+                                            <CalendarDays className="h-5 w-5 mr-3 text-muted-foreground" />
+                                            <div>
+                                                <p className="font-medium">Date</p>
+                                                <p className="text-sm text-muted-foreground">{formatDate(event.eventDate)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <Clock className="h-5 w-5 mr-3 text-muted-foreground" />
+                                            <div>
+                                                <p className="font-medium">Time</p>
+                                                <p className="text-sm text-muted-foreground">{formatTime(event.eventDate)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <MapPin className="h-5 w-5 mr-3 text-muted-foreground" />
+                                            <div>
+                                                <p className="font-medium">Location</p>
+                                                <p className="text-sm text-muted-foreground">{event.venue}</p>
+                                            </div>
+                                        </div>
+                                        {event.maxCapacity !== null && (
+                                            <div className="flex items-center">
+                                                <Users className="h-5 w-5 mr-3 text-muted-foreground" />
+                                                <div>
+                                                    <p className="font-medium">Capacity</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {event.currentBookingsCount} / {event.maxCapacity} spots
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="bg-muted rounded-lg p-6">
+                                    <h3 className="text-lg font-semibold mb-4">Organizer</h3>
+                                    <div className="flex items-center">
+                                        <Avatar className="h-10 w-10 mr-4">
+                                            <AvatarFallback>{event.adminCreatorUsername.charAt(0).toUpperCase()}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium">{event.adminCreatorUsername}</p>
+                                            <p className="text-sm text-muted-foreground">Event Organizer</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="reviews" className="pt-6">
+                        <div className="mb-6">
+                            <h3 className="text-xl font-semibold mb-2">Reviews</h3>
+                            <div className="flex items-center">
+                                <div className="flex items-center mr-2">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                        <Star
+                                            key={i}
+                                            className={`h-5 w-5 ${i < Number(getAverageRating()) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
+                                        />
+                                    ))}
+                                </div>
+                                <span className="font-semibold">{getAverageRating()}</span>
+                                <span className="text-muted-foreground ml-2">({sampleReviews.length} reviews)</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            {sampleReviews.map(review => (
+                                <div key={review.id} className="border-b pb-6">
+                                    <div className="flex items-center mb-2">
+                                        <Avatar className="h-8 w-8 mr-2">
+                                            <AvatarImage src={review.avatar} alt={review.name} />
+                                            <AvatarFallback>{review.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium text-sm">{review.name}</p>
+                                            <p className="text-xs text-muted-foreground">{new Date(review.date).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center mb-2">
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                            <Star
+                                                key={i}
+                                                className={`h-4 w-4 ${i < review.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className="text-sm">{review.comment}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="similar" className="pt-6">
+                        <h3 className="text-xl font-semibold mb-6">Similar Events You Might Like</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {similarEvents.map(event => (
+                                <Card key={event.id} className="h-full overflow-hidden">
+                                    <img src={event.image} alt={event.name} className="w-full h-40 object-cover" />
+                                    <CardContent className="p-4">
+                                        <h4 className="font-semibold mb-2">{event.name}</h4>
+                                        <div className="space-y-2 text-sm mb-4">
+                                            <div className="flex items-center">
+                                                <Badge variant="outline" className="category-badge">
+                                                    {event.category}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex items-center">
+                                                <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
+                                                <span>{new Date(event.date).toLocaleDateString()}</span>
+                                            </div>
+                                            <div className="flex items-center">
+                                                <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                                                <span className="truncate">{event.venue}</span>
+                                            </div>
+                                        </div>
+                                        <Button asChild size="sm" variant="outline" className="w-full">
+                                            <Link href={`/events/${event.id}`}>View Details</Link>
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </TabsContent>
+                </Tabs>
+            </motion.div>
         </div>
     );
 }

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookingsAPI, handleApiError } from '@/lib/api';
+import BookingsAPI from '@/api/bookings';
+import { handleApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { CalendarDays, Clock, MapPin, Loader2, X } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Loader2, X, CheckCircle } from 'lucide-react';
 
 interface Booking {
     id: string;
@@ -69,7 +70,7 @@ export default function MyBookingsPage() {
         setError(null);
 
         try {
-            const response = await BookingsAPI.getUserBookings(currentPage, pageSize, 'bookingTime,desc');
+            const response = await BookingsAPI.getUserBookings(currentPage, pageSize);
 
             if (response.success && response.data) {
                 setBookings(response.data.content);
@@ -288,6 +289,10 @@ export default function MyBookingsPage() {
                     <Card className="h-full flex flex-col overflow-hidden transition-all hover:shadow-md">
                         <div className="relative">
                             {isPastEvent && <Badge className="absolute top-2 right-2 z-10 bg-gray-500">Past Event</Badge>}
+                            <Badge className="absolute top-2 left-2 z-10 bg-green-600 text-white">
+                                <CheckCircle className="mr-1 h-3 w-3" />
+                                Booked
+                            </Badge>
                             <img
                                 src={getEventImageUrl(event.imageUrl) || '/placeholder.svg'}
                                 alt={event.name}
@@ -320,7 +325,15 @@ export default function MyBookingsPage() {
                                     <span className="truncate">{event.venue}</span>
                                 </div>
                             </div>
-                            <div className="mt-4 pt-2 border-t text-xs text-muted-foreground">Booked on {formatBookingDate(booking.bookingTime)}</div>
+                            <div className="mt-4 pt-2 border-t">
+                                <div className="text-xs text-muted-foreground">Booked on {formatBookingDate(booking.bookingTime)}</div>
+                                <div className="mt-2">
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                        <CheckCircle className="mr-1 h-3 w-3 text-green-600" />
+                                        Confirmed
+                                    </Badge>
+                                </div>
+                            </div>
                         </CardContent>
                         <CardFooter className="p-4 pt-0 mt-auto">
                             <div className="w-full flex items-center justify-between gap-2">

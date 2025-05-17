@@ -1,6 +1,6 @@
 'use client';
 
-import EventForm from '@/components/admin/event-form'; // Assuming EventForm will be created
+import EventForm from '@/components/admin/event-form';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import Link from 'next/link';
 

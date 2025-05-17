@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CalendarDays, Users, Award, Clock, MapPin, Star, Zap, Shield, Heart, CheckCircle, ArrowRight, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 // Animation variants
 const fadeIn = {
@@ -70,7 +71,18 @@ const testimonials = [
 ];
 
 // Sample upcoming events
-const upcomingEvents = [
+interface UpcomingEvent {
+    id: string;
+    name: string;
+    category: string;
+    date: string;
+    venue: string;
+    image: string;
+    price: number;
+    isBooked?: boolean;
+}
+
+const upcomingEvents: UpcomingEvent[] = [
     {
         id: '1',
         name: 'Tech Innovation Summit',
@@ -101,7 +113,15 @@ const upcomingEvents = [
 ];
 
 // Stats counter component
-const CounterAnimation = ({ target, label, duration = 2000, prefix = '', suffix = '' }) => {
+interface CounterAnimationProps {
+    target: string;
+    label: string;
+    duration?: number;
+    prefix?: string;
+    suffix?: string;
+}
+
+const CounterAnimation = ({ target, label, duration = 2000, prefix = '', suffix = '' }: CounterAnimationProps) => {
     const [count, setCount] = useState(0);
 
     useEffect(() => {
@@ -136,6 +156,28 @@ const CounterAnimation = ({ target, label, duration = 2000, prefix = '', suffix 
 };
 
 export default function Home() {
+    const { user } = useAuth();
+
+    // Check booked status based on user data
+    const [bookedEvents, setBookedEvents] = useState<Record<string, boolean>>({});
+
+    useEffect(() => {
+        // If user is logged in, check which events are booked
+        if (user) {
+            const checkBookedEvents = async () => {
+                try {
+                    // In a real implementation, we would fetch this from an API
+                    // For now, let's pretend event with ID '2' is booked
+                    setBookedEvents({ '2': true });
+                } catch (error) {
+                    console.error("Error loading booked events:", error);
+                }
+            };
+
+            checkBookedEvents();
+        }
+    }, [user]);
+
     return (
         <div className="flex flex-col min-h-screen">
             {/* Hero Section */}
@@ -161,9 +203,11 @@ export default function Home() {
                             <Button asChild size="lg" className="rounded-full px-8">
                                 <Link href="/events">Explore Events</Link>
                             </Button>
-                            <Button asChild variant="outline" size="lg" className="rounded-full px-8 bg-transparent text-white border-white hover:bg-white hover:text-primary">
-                                <Link href="/register">Create Account</Link>
-                            </Button>
+                            {!user && (
+                                <Button asChild variant="outline" size="lg" className="rounded-full px-8 bg-transparent text-white border-white hover:bg-white hover:text-primary">
+                                    <Link href="/register">Create Account</Link>
+                                </Button>
+                            )}
                         </div>
                     </motion.div>
 
@@ -252,6 +296,12 @@ export default function Home() {
                                     <div className="relative">
                                         <img src={event.image || '/placeholder.svg'} alt={event.name} className="w-full event-card-image" />
                                         <Badge className="absolute top-4 right-4 bg-primary text-primary-foreground">{event.category}</Badge>
+                                        {bookedEvents[event.id] && (
+                                            <Badge className="absolute top-4 left-4 z-10 bg-green-600 text-white">
+                                                <CheckCircle className="mr-1 h-3 w-3" />
+                                                Booked
+                                            </Badge>
+                                        )}
                                     </div>
                                     <CardContent className="p-6">
                                         <h3 className="text-xl font-semibold mb-2">{event.name}</h3>
@@ -284,7 +334,7 @@ export default function Home() {
                                             <div className="font-bold text-lg">${event.price.toFixed(2)}</div>
                                             <Button asChild size="sm">
                                                 <Link href={`/events/${event.id}`}>
-                                                    Book Now <ChevronRight className="ml-1 h-4 w-4" />
+                                                    {bookedEvents[event.id] ? 'View Booking' : 'Book Now'} <ChevronRight className="ml-1 h-4 w-4" />
                                                 </Link>
                                             </Button>
                                         </div>
@@ -693,9 +743,11 @@ export default function Home() {
                             <Button asChild size="lg" variant="secondary" className="rounded-full px-8">
                                 <Link href="/events">Browse Events</Link>
                             </Button>
-                            <Button asChild size="lg" variant="outline" className="rounded-full px-8 bg-transparent text-white border-white hover:bg-white hover:text-primary">
-                                <Link href="/register">Sign Up Now</Link>
-                            </Button>
+                            {!user && (
+                                <Button asChild size="lg" variant="outline" className="rounded-full px-8 bg-transparent text-white border-white hover:bg-white hover:text-primary">
+                                    <Link href="/register">Sign Up Now</Link>
+                                </Button>
+                            )}
                         </div>
                     </motion.div>
                 </div>

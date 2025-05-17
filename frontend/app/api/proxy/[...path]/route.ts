@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
-// Helper to extract Authorization header
 const getAuthHeader = (request: NextRequest): Record<string, string> => {
     const authHeader = request.headers.get("Authorization");
     if (authHeader) {
@@ -11,7 +10,6 @@ const getAuthHeader = (request: NextRequest): Record<string, string> => {
     return {};
 }
 
-// Define the context type based on Next.js 15 requirements for awaiting params
 type ProxyRouteContextParams = { path: string[] };
 type ProxyRouteContext = {
   params: Promise<ProxyRouteContextParams>
@@ -28,10 +26,9 @@ async function getPathFromContext(context: ProxyRouteContext | Promise<ProxyRout
         throw new Error("Resolved params object or its path property is invalid.");
     }
 
-    const pathValue = actualParamsObject.path; // pathValue is string[]
+    const pathValue = actualParamsObject.path;
 
     if (!Array.isArray(pathValue)) {
-        // This check might be redundant if types are correct, but good for safety
         throw new Error("Resolved path is not an array in proxy.");
     }
     return pathValue.join("/");
@@ -74,9 +71,7 @@ export async function POST(request: NextRequest, context: ProxyRouteContext | Pr
         const contentType = request.headers.get("content-type") || "";
         let response;
 
-        // Handle FormData (multipart/form-data) differently than JSON
         if (contentType.includes("multipart/form-data")) {
-            // Forward the FormData as is
             const formData = await request.formData();
             const headers = getAuthHeader(request);
 
@@ -86,7 +81,6 @@ export async function POST(request: NextRequest, context: ProxyRouteContext | Pr
                 body: formData,
             });
         } else if (contentType.includes("application/json")) {
-            // Handle JSON requests
             let body;
             try {
                 body = await request.json();

@@ -256,7 +256,7 @@ export default function EventForm({ eventId }: EventFormProps) {
                     variant: "default"
                 });
 
-                router.push('/admin/events');
+                router.push('/admin');
                 router.refresh();
             } else {
                 throw new Error(response.error || 'Failed to save event');
