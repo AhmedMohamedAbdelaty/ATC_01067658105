@@ -37,27 +37,6 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
             </div>
         `;
 
-        // check which events are already booked
-        let userBookings = [];
-        if (localStorage.getItem('token')) {
-            try {
-                console.log('Fetching user bookings...');
-                const bookingsResponse = await BookingsAPI.getUserBookings();
-                console.log('User bookings response:', bookingsResponse);
-
-                if (bookingsResponse.success && bookingsResponse.data && bookingsResponse.data.content) {
-                    userBookings = bookingsResponse.data.content.map(booking => booking.eventDetails.id);
-                    console.log('User has bookings for events:', userBookings);
-                } else {
-                    console.log('No bookings found or empty response');
-                }
-            } catch (error) {
-                console.error('Error fetching user bookings:', error);
-            }
-        } else {
-            console.log('User not logged in, skipping bookings fetch');
-        }
-
         // ghets all events
         const response = await EventsAPI.getAllEvents(page, size, sort, category);
 
@@ -80,21 +59,38 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
 
             // Add card for each event
             events.forEach(event => {
-                const isBooked = userBookings.includes(event.id);
+                const isBookedByCurrentUser = event.isCurrentUserBooked;
+                const isFull = event.maxCapacity !== null && event.currentBookingsCount >= event.maxCapacity;
                 const eventDate = new Date(event.eventDate);
-                const imageUrl = event.imageUrl && event.imageUrl.startsWith('http') ? event.imageUrl : 'https://placehold.co/600x400?text=Event+Image';
+                const imageUrl = event.imageUrl && event.imageUrl.startsWith('http') ? event.imageUrl : 'https://archive.org/download/placeholder-image/placeholder-image.jpg';
+
+                let badgeHTML = '';
+                if (isBookedByCurrentUser) {
+                    badgeHTML = `<a href="event-details.html?id=${event.id}" class="badge bg-success booked-badge booked-badge-link text-decoration-none position-absolute top-0 start-0 m-2">Booked</a>`;
+                } else if (isFull) {
+                    badgeHTML = `<span class="badge bg-danger fully-booked-badge position-absolute top-0 start-0 m-2">Fully Booked</span>`;
+                }
+
+                let buttonHTML = '';
+                if (isBookedByCurrentUser) {
+                    buttonHTML = `<a href="event-details.html?id=${event.id}" class="btn btn-success">View Booking</a>`;
+                } else if (isFull) {
+                    buttonHTML = `<button class="btn btn-outline-secondary view-details-btn" data-event-id="${event.id}" disabled>Fully Booked</button>`;
+                } else {
+                    buttonHTML = `<button class="btn btn-outline-primary view-details-btn" data-event-id="${event.id}">View Details & Book</button>`;
+                }
 
                 eventsHTML += `
                     <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card event-card h-100">
-                            ${isBooked ? `<a href="event-details.html?id=${event.id}" class="badge bg-success booked-badge booked-badge-link text-decoration-none">Booked</a>` : ''}
-                            <img src="${imageUrl}" class="card-img-top" alt="${event.name}">
+                        <div class="card event-card h-100 position-relative">
+                            ${badgeHTML}
+                            <img src="${imageUrl}" class="card-img-top" alt="${event.name}" style="margin-top: ${badgeHTML ? '1.5rem' : '0'};">
                             <div class="card-body">
                                 <h5 class="card-title">${event.name}</h5>
-                                <p class="card-text text-truncate">${event.description}</p>
+                                <p class="card-text text-truncate">${event.description || 'No description available.'}</p>
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="badge bg-primary">${event.category}</span>
-                                    <span class="text-muted">$${event.price.toFixed(2)}</span>
+                                    <span class="text-muted">${event.price > 0 ? `$${event.price.toFixed(2)}` : 'Free'}</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <small class="text-muted">
@@ -104,13 +100,13 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
                                         <i class="bi bi-geo-alt"></i> ${event.venue}
                                     </small>
                                 </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">Available Spots: ${event.maxCapacity ? (event.maxCapacity - event.currentBookingsCount) : 'Unlimited'} / ${event.maxCapacity || 'Unlimited'}</small>
+                                </div>
                             </div>
                             <div class="card-footer">
                                 <div class="d-grid">
-                                    ${isBooked
-                                        ? `<a href="event-details.html?id=${event.id}" class="btn btn-success">Booked</a>`
-                                        : `<button class="btn btn-outline-primary view-details-btn" data-event-id="${event.id}">View Details</button>`
-                                    }
+                                    ${buttonHTML}
                                 </div>
                             </div>
                         </div>
@@ -161,18 +157,17 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
                 paginationContainer.innerHTML = '';
             }
 
-            const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
+            const viewDetailsButtons = document.querySelectorAll('.view-details-btn:not([disabled])');
             viewDetailsButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     const eventId = this.getAttribute('data-event-id');
-                    console.log('Navigating to event details for ID:', eventId);
                     window.location.href = `event-details.html?id=${eventId}`;
                 });
             });
         } else {
             eventsContainer.innerHTML = `
                 <div class="col-12 text-center">
-                    <p>Error loading events. Please try again later.</p>
+                    <p>Error loading events: ${response.error || 'Please try again later.'}</p>
                 </div>
             `;
         }
@@ -180,7 +175,7 @@ async function loadEvents(page = 0, size = 10, sort = 'eventDate,asc', category 
         console.error('Error loading events:', error);
         eventsContainer.innerHTML = `
             <div class="col-12 text-center">
-                <p>Error loading events. Please try again later.</p>
+                <p>An unexpected error occurred while loading events. Please try again later.</p>
             </div>
         `;
     }

@@ -101,6 +101,7 @@ public class EventDto {
         private String imageUrl;
         private Integer maxCapacity;
         private Integer currentBookingsCount;
+        private Boolean isCurrentUserBooked;
         private String adminCreatorUsername;
         private OffsetDateTime createdAt;
         private OffsetDateTime updatedAt;

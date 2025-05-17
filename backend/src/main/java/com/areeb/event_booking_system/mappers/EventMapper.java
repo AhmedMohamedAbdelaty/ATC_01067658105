@@ -1,7 +1,5 @@
 package com.areeb.event_booking_system.mappers;
 
-import java.util.List;
-
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -34,8 +32,7 @@ public interface EventMapper {
     @Mapping(target = "updatedAt", ignore = true)
     void updateEventFromRequest(EventDto.UpdateEventRequest dto, @MappingTarget Event existingEvent);
 
-    @Mapping(source = "adminCreator.username", target = "adminCreatorUsername")
-    EventDto.EventResponse eventToEventResponse(Event event);
-
-    List<EventDto.EventResponse> eventsToEventResponses(List<Event> events);
+    @Mapping(source = "event.adminCreator.username", target = "adminCreatorUsername")
+    @Mapping(source = "isCurrentUserBooked", target = "isCurrentUserBooked")
+    EventDto.EventResponse eventToEventResponse(Event event, Boolean isCurrentUserBooked);
 }

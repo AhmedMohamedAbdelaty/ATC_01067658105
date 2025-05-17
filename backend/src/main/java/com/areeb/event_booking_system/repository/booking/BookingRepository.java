@@ -40,4 +40,6 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     @Override
     @Query(value = "SELECT b FROM Booking b JOIN FETCH b.user u JOIN FETCH b.event e LEFT JOIN FETCH e.adminCreator", countQuery = "SELECT count(b) FROM Booking b")
     Page<Booking> findAll(Pageable pageable);
+
+    void deleteByEventId(UUID eventId);
 }

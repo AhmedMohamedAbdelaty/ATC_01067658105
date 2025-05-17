@@ -137,7 +137,10 @@ function setupLogoutButton() {
 
 function setupLoginForm() {
     const loginForm = document.getElementById('login-form');
-    if (loginForm) {
+    const loginButton = document.getElementById('login-button');
+    const spinner = loginButton ? loginButton.querySelector('.spinner-border') : null;
+
+    if (loginForm && loginButton && spinner) {
         loginForm.addEventListener('submit', async function(event) {
             event.preventDefault();
             const emailOrUsernameInput = document.getElementById('username');
@@ -151,9 +154,13 @@ function setupLoginForm() {
                 }
                 return;
             }
+            errorMessageDiv.style.display = 'none';
 
             const emailOrUsername = emailOrUsernameInput.value;
             const password = passwordInput.value;
+
+            spinner.style.display = 'inline-block';
+            loginButton.disabled = true;
 
             try {
                 const response = await AuthAPI.login(emailOrUsername, password);
@@ -163,28 +170,52 @@ function setupLoginForm() {
                     checkAuthStatus();
                     window.location.href = 'index.html';
                 } else {
-                    errorMessageDiv.textContent = response.error || 'Login failed. Please check your credentials.';
+                    errorMessageDiv.textContent = (response && response.error) ? response.error : 'Login failed. Please check your credentials.';
                     errorMessageDiv.style.display = 'block';
                 }
             } catch (error) {
                 console.error('Login API error:', error);
                 errorMessageDiv.textContent = error.message || 'An unexpected error occurred during login.';
                 errorMessageDiv.style.display = 'block';
+            } finally {
+                spinner.style.display = 'none';
+                loginButton.disabled = false;
             }
         });
+    } else {
+        console.error('Could not setup login form: one or more elements missing.');
     }
 }
 
 function setupRegisterForm() {
     const registerForm = document.getElementById('register-form');
-    if (registerForm) {
+    const registerButton = document.getElementById('register-button');
+    const spinner = registerButton ? registerButton.querySelector('.spinner-border') : null;
+    const errorMessageDiv = document.getElementById('error-message');
+    const successMessageDiv = document.getElementById('success-message');
+
+    if (registerForm && registerButton && spinner && errorMessageDiv && successMessageDiv) {
         registerForm.addEventListener('submit', async function(event) {
             event.preventDefault();
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
-            const errorMessageDiv = document.getElementById('register-error-message');
+
+            const usernameInput = document.getElementById('username');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const confirmPasswordInput = document.getElementById('confirm-password');
+
+            errorMessageDiv.style.display = 'none';
+            successMessageDiv.style.display = 'none';
+
+            if (!usernameInput || !emailInput || !passwordInput || !confirmPasswordInput) {
+                errorMessageDiv.textContent = "Error occurred with the registration form elements.";
+                errorMessageDiv.style.display = 'block';
+                return;
+            }
+
+            const username = usernameInput.value;
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
 
             if (password !== confirmPassword) {
                 errorMessageDiv.textContent = "Passwords do not match.";
@@ -192,21 +223,37 @@ function setupRegisterForm() {
                 return;
             }
 
+            spinner.style.display = 'inline-block';
+            registerButton.disabled = true;
+
             try {
                 const response = await AuthAPI.register(username, email, password);
-                if (response.success) {
-                    alert('Registration successful! Please log in.');
-                    window.location.href = 'login.html';
+
+                if (response && response.success) {
+                    registerForm.style.display = 'none';
+                    successMessageDiv.textContent = 'Registration successful! Redirecting to login...';
+                    successMessageDiv.style.display = 'block';
+                    errorMessageDiv.style.display = 'none';
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 3000);
                 } else {
-                    errorMessageDiv.textContent = response.error || 'Registration failed.';
+                    errorMessageDiv.textContent = (response && response.error) ? response.error : 'Registration failed. Please try again.';
                     errorMessageDiv.style.display = 'block';
                 }
             } catch (error) {
-                console.error('Registration API error:', error);
+                console.error('Register API error:', error);
                 errorMessageDiv.textContent = error.message || 'An unexpected error occurred during registration.';
                 errorMessageDiv.style.display = 'block';
+            } finally {
+                if (!successMessageDiv.style.display || successMessageDiv.style.display === 'none') {
+                    spinner.style.display = 'none';
+                    registerButton.disabled = false;
+                }
             }
         });
+    } else {
+        console.error('Could not setup register form');
     }
 }
 
